@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in-up  { animation: fadeInUp  0.6s ease-out both; }
+.animate-fade-in     { animation: fadeIn    0.5s ease-out both; }
+.animate-scale-in    { animation: scaleIn   0.4s ease-out both; }
+
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: #0A1928; }
+::-webkit-scrollbar-thumb { background: #FD6F2F; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #ff8c52; }

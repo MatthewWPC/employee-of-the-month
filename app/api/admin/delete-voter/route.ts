@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_noStore as noStore } from 'next/cache';
 import { sql } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function DELETE(request: NextRequest) {
+  noStore();
   try {
     const { voterName } = await request.json();
     if (!voterName || typeof voterName !== 'string') {

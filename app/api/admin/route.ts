@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  noStore(); // Opt out of Next.js data cache — ensures SQL queries hit the live DB every time
   try {
     await initializeSchema();
 
@@ -31,9 +33,8 @@ export async function GET() {
 
     const { rows: interactions } = await sql`SELECT voter_name, about_person, description, created_at FROM interactions ORDER BY created_at DESC`;
 
-    const dbHost = (process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? 'NONE').replace(/:[^@]*@/, ':***@').slice(0, 80);
     return NextResponse.json(
-      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, totalVotesCount: rawVotes.length, _dbHost: dbHost },
+      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, totalVotesCount: rawVotes.length },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   } catch (error) {

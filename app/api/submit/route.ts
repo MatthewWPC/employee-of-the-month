@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
+  noStore();
   try {
     const body = await request.json();
     const { voterName, votes, interaction } = body;

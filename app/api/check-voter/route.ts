@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
+  noStore();
   try {
     const { searchParams } = new URL(request.url);
     const name = searchParams.get('name');
@@ -9,8 +11,7 @@ export async function GET(request: NextRequest) {
 
     await initializeSchema();
     const { rows } = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name.trim()})`;
-    const dbHost = (process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? 'NONE').replace(/:[^@]*@/, ':***@').slice(0, 80);
-    return NextResponse.json({ hasVoted: rows.length > 0, _dbHost: dbHost });
+    return NextResponse.json({ hasVoted: rows.length > 0 });
   } catch (error) {
     console.error('Check voter error:', error);
     return NextResponse.json({ hasVoted: false });

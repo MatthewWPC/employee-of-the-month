@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     await initializeSchema();
 
     const name = voterName.trim();
-    const existing = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name})`;
+    const { rows: existing } = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name})`;
     if (existing.length > 0) {
       return NextResponse.json({ error: 'already_voted' }, { status: 409 });
     }

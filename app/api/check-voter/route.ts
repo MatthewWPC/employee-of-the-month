@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
     if (!name) return NextResponse.json({ hasVoted: false });
 
     await initializeSchema();
-    const result = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name.trim()})`;
-    return NextResponse.json({ hasVoted: result.length > 0 });
+    const { rows } = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name.trim()})`;
+    return NextResponse.json({ hasVoted: rows.length > 0 });
   } catch (error) {
     console.error('Check voter error:', error);
     return NextResponse.json({ hasVoted: false });

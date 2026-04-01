@@ -31,8 +31,9 @@ export async function GET() {
 
     const { rows: interactions } = await sql`SELECT voter_name, about_person, description, created_at FROM interactions ORDER BY created_at DESC`;
 
+    const dbHost = (process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? 'NONE').replace(/:[^@]*@/, ':***@').slice(0, 80);
     return NextResponse.json(
-      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, totalVotesCount: rawVotes.length },
+      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, totalVotesCount: rawVotes.length, _dbHost: dbHost },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   } catch (error) {

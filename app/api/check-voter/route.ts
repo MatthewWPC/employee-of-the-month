@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
 
     await initializeSchema();
     const { rows } = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name.trim()})`;
-    return NextResponse.json({ hasVoted: rows.length > 0 });
+    const dbHost = (process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? 'NONE').replace(/:[^@]*@/, ':***@').slice(0, 80);
+    return NextResponse.json({ hasVoted: rows.length > 0, _dbHost: dbHost });
   } catch (error) {
     console.error('Check voter error:', error);
     return NextResponse.json({ hasVoted: false });

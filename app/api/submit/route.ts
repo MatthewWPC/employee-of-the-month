@@ -12,24 +12,20 @@ export async function POST(request: NextRequest) {
 
     await initializeSchema();
 
-    const existing = await sql`
-      SELECT id FROM voters WHERE LOWER(name) = LOWER(${voterName.trim()})
-    `;
-    if (existing.rows.length > 0) {
+    const name = voterName.trim();
+    const existing = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name})`;
+    if (existing.length > 0) {
       return NextResponse.json({ error: 'already_voted' }, { status: 409 });
     }
 
-    await sql`INSERT INTO voters (name) VALUES (${voterName.trim()})`;
+    await sql`INSERT INTO voters (name) VALUES (${name})`;
 
-    for (const [category, nominees] of Object.entries(votes as Record<string, string[]>)) {
-      if (Array.isArray(nominees)) {
-        for (const nominee of nominees) {
-          if (typeof nominee === 'string' && nominee.trim()) {
-            await sql`
-              INSERT INTO votes (voter_name, category, nominee)
-              VALUES (${voterName.trim()}, ${category}, ${nominee.trim()})
-            `;
-          }
+    const voteEntries = Object.entries(votes as Record<string, string[]>);
+    for (const [category, nominees] of voteEntries) {
+      if (!Array.isArray(nominees)) continue;
+      for (const nominee of nominees) {
+        if (typeof nominee === 'string' && nominee.trim()) {
+          await sql`INSERT INTO votes (voter_name, category, nominee) VALUES (${name}, ${category}, ${nominee.trim()})`;
         }
       }
     }
@@ -37,11 +33,7 @@ export async function POST(request: NextRequest) {
     if (interaction?.aboutPerson && interaction?.description) {
       await sql`
         INSERT INTO interactions (voter_name, about_person, description)
-        VALUES (
-          ${voterName.trim()},
-          ${interaction.aboutPerson.trim()},
-          ${interaction.description.trim().slice(0, 300)}
-        )
+        VALUES (${name}, ${interaction.aboutPerson.trim()}, ${interaction.description.trim().slice(0, 300)})
       `;
     }
 

@@ -14,6 +14,69 @@ const TEAM_MEMBERS = [
   'Candice Boshoff',
 ];
 
+// Map each member to their photo file and initials fallback
+const MEMBER_META: Record<string, { photo: string; initials: string; color: string }> = {
+  'Steve Staplyton Smith': { photo: '/team/steve.png',      initials: 'SS', color: '#2E5B8A' },
+  'Adam Turk':             { photo: '/team/adam.png',       initials: 'AT', color: '#1A5276' },
+  'Jan Faure':             { photo: '/team/jan.png',        initials: 'JF', color: '#1F618D' },
+  'Matthew Norris':        { photo: '/team/matthew.png',    initials: 'MN', color: '#154360' },
+  'James Booth':           { photo: '/team/james-booth.png',initials: 'JB', color: '#1A3A5C' },
+  'James Poole':           { photo: '/team/james-poole.png',initials: 'JP', color: '#215A8A' },
+  'Kira Williams':         { photo: '/team/kira.png',       initials: 'KW', color: '#1E5799' },
+  'Candice Boshoff':       { photo: '/team/candice.png',    initials: 'CB', color: '#1A4F72' },
+};
+
+function MemberAvatar({ name, size = 48, selected }: { name: string; size?: number; selected: boolean }) {
+  const meta = MEMBER_META[name];
+  const [imgError, setImgError] = useState(false);
+  if (!meta || imgError) {
+    return (
+      <div
+        style={{
+          width: size, height: size,
+          borderRadius: '50%',
+          background: meta?.color ?? '#1A3A5C',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: size * 0.32, fontWeight: 700, color: 'white',
+          flexShrink: 0,
+          border: selected ? '2.5px solid #FD6F2F' : '2px solid rgba(255,255,255,0.15)',
+          transition: 'border-color 0.15s',
+        }}
+      >
+        {meta?.initials ?? name.charAt(0)}
+      </div>
+    );
+  }
+  // Wrapper clips the slightly-zoomed image to a perfect circle,
+  // hiding any orange border ring or background bleed from the source crop.
+  return (
+    <div
+      style={{
+        width: size, height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        flexShrink: 0,
+        border: selected ? '2.5px solid #FD6F2F' : '2px solid rgba(255,255,255,0.15)',
+        transition: 'border-color 0.15s',
+        boxShadow: selected ? '0 0 0 3px rgba(253,111,47,0.2)' : 'none',
+      }}
+    >
+      <img
+        src={meta.photo}
+        alt={name}
+        onError={() => setImgError(true)}
+        style={{
+          width: '118%', height: '118%',
+          marginLeft: '-9%', marginTop: '-9%',
+          objectFit: 'cover',
+          objectPosition: 'center center',
+          display: 'block',
+        }}
+      />
+    </div>
+  );
+}
+
 const CATEGORIES = [
   { id: 'cornerstone',    name: 'THE CORNERSTONE',    icon: '🏛️', description: 'The foundation others build on. Consistent, dependable, and unshakeable — the person the whole team quietly relies on to deliver, without fail, every single time.' },
   { id: 'pilot',          name: 'THE PILOT',           icon: '🧭', description: 'Committed to growth — theirs and others\'. They invest in becoming sharper, more skilled, and more effective every quarter. Always learning, always improving.' },
@@ -223,29 +286,36 @@ export default function VotePage() {
                           <button
                             key={member}
                             onClick={() => toggleVote(cat.id, member)}
-                            className="px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 text-left"
+                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-150 text-left"
                             style={{
-                              background: isSelected ? '#FD6F2F' : 'rgba(255,255,255,0.06)',
-                              color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.7)',
-                              border: isSelected ? '1.5px solid #FD6F2F' : '1.5px solid rgba(204,204,204,0.1)',
+                              background: isSelected ? 'rgba(253,111,47,0.18)' : 'rgba(255,255,255,0.05)',
+                              border: isSelected ? '1.5px solid rgba(253,111,47,0.7)' : '1.5px solid rgba(204,204,204,0.1)',
                               transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                              boxShadow: isSelected ? '0 4px 14px rgba(253,111,47,0.3)' : 'none',
-                              fontWeight: isSelected ? '700' : '500',
+                              boxShadow: isSelected ? '0 4px 16px rgba(253,111,47,0.2)' : 'none',
                             }}
                             onMouseEnter={(e) => {
                               if (!isSelected) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
                                 e.currentTarget.style.border = '1.5px solid rgba(253,111,47,0.3)';
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!isSelected) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
                                 e.currentTarget.style.border = '1.5px solid rgba(204,204,204,0.1)';
                               }
                             }}
                           >
-                            {member}
+                            <MemberAvatar name={member} size={40} selected={isSelected} />
+                            <span
+                              className="text-xs leading-snug"
+                              style={{
+                                color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.75)',
+                                fontWeight: isSelected ? 700 : 500,
+                              }}
+                            >
+                              {member}
+                            </span>
                           </button>
                         );
                       })}
@@ -369,8 +439,11 @@ export default function VotePage() {
                           className="flex items-center justify-between py-2 px-3 rounded-xl"
                           style={{ background: 'rgba(255,255,255,0.05)' }}
                         >
-                          <span className="text-xs font-medium text-white">{member}</span>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <MemberAvatar name={member} size={28} selected={false} />
+                            <span className="text-xs font-medium text-white truncate">{member}</span>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                             {Array.from({ length: nominationTally[member] || 0 }).map((_, i) => (
                               <div key={i} className="w-2 h-2 rounded-full" style={{ background: '#FD6F2F' }} />
                             ))}

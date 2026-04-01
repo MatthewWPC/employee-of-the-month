@@ -26,6 +26,8 @@ type AdminData = {
   voters: { name: string; voted_at: string }[];
   votesByCategory: Record<string, Record<string, number>>;
   totalByNominee: Record<string, number>;
+  voterBreakdown: Record<string, Record<string, string[]>>;
+  voteCountPerVoter: Record<string, number>;
   interactions: { voter_name: string; about_person: string; description: string; created_at: string }[];
   totalVotesCount: number;
 };
@@ -55,13 +57,43 @@ export default function AdminPage() {
   const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'interactions' | 'voters'>('overview');
+  const [expandedVoter, setExpandedVoter] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const refreshData = () => {
+    fetch('/api/admin', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setData(d))
+      .catch(() => {});
+  };
 
   useEffect(() => {
-    fetch('/api/admin')
+    fetch('/api/admin', { cache: 'no-store' })
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  const handleDelete = async (voterName: string) => {
+    setDeleting(voterName);
+    try {
+      const res = await fetch('/api/admin/delete-voter', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voterName }),
+      });
+      if (res.ok) {
+        if (expandedVoter === voterName) setExpandedVoter(null);
+        refreshData();
+      }
+    } catch {
+      // silent
+    } finally {
+      setDeleting(null);
+      setConfirmDelete(null);
+    }
+  };
 
   const leaderboardData = data
     ? Object.entries(data.totalByNominee).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
@@ -303,6 +335,61 @@ export default function AdminPage() {
             {/* VOTERS TAB */}
             {activeTab === 'voters' && (
               <div className="animate-fade-in">
+                {/* Confirmation dialog overlay */}
+                {confirmDelete && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-center justify-center px-4"
+                    style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+                  >
+                    <div
+                      className="rounded-2xl p-6 max-w-sm w-full animate-scale-in"
+                      style={{
+                        background: '#122E4C',
+                        border: '1px solid rgba(220,50,50,0.3)',
+                        boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+                      }}
+                    >
+                      <div className="text-2xl mb-3">⚠️</div>
+                      <h3 className="font-bold text-white text-base mb-2">Delete this voter?</h3>
+                      <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                        Are you sure you want to delete{' '}
+                        <strong className="text-white">{confirmDelete}</strong> and all of their votes?
+                      </p>
+                      <p className="text-xs mb-6" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        This cannot be undone.
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setConfirmDelete(null)}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                          style={{
+                            background: 'rgba(255,255,255,0.07)',
+                            color: 'rgba(255,255,255,0.7)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleDelete(confirmDelete)}
+                          disabled={deleting === confirmDelete}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-white"
+                          style={{
+                            background: deleting === confirmDelete ? 'rgba(220,50,50,0.5)' : '#DC3232',
+                            boxShadow: deleting === confirmDelete ? 'none' : '0 4px 16px rgba(220,50,50,0.35)',
+                          }}
+                          onMouseEnter={(e) => { if (deleting !== confirmDelete) e.currentTarget.style.background = '#C42B2B'; }}
+                          onMouseLeave={(e) => { if (deleting !== confirmDelete) e.currentTarget.style.background = '#DC3232'; }}
+                        >
+                          {deleting === confirmDelete ? 'Deleting…' : 'Yes, Delete'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div
                   className="rounded-2xl p-5"
                   style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}
@@ -314,26 +401,119 @@ export default function AdminPage() {
                     <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>No votes yet.</p>
                   ) : (
                     <div className="space-y-2">
-                      {data.voters.map((voter, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between py-2.5 px-4 rounded-xl"
-                          style={{ background: 'rgba(255,255,255,0.04)' }}
-                        >
-                          <div className="flex items-center gap-3">
+                      {data.voters.map((voter) => {
+                        const isExpanded = expandedVoter === voter.name;
+                        const voteCount = data.voteCountPerVoter[voter.name] ?? 0;
+                        const breakdown = data.voterBreakdown[voter.name] ?? {};
+
+                        return (
+                          <div key={voter.name}>
+                            {/* Voter row */}
                             <div
-                              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                              style={{ background: '#FD6F2F' }}
+                              className="flex items-center justify-between py-2.5 px-4 rounded-xl"
+                              style={{
+                                background: isExpanded ? 'rgba(253,111,47,0.08)' : 'rgba(255,255,255,0.04)',
+                                border: isExpanded ? '1px solid rgba(253,111,47,0.2)' : '1px solid transparent',
+                              }}
                             >
-                              {voter.name.charAt(0).toUpperCase()}
+                              <div className="flex items-center gap-3 min-w-0">
+                                {/* Avatar */}
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                                  style={{ background: '#FD6F2F' }}
+                                >
+                                  {voter.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-sm font-medium text-white truncate">{voter.name}</span>
+                                {/* Vote count badge */}
+                                <span
+                                  className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold"
+                                  style={{ background: 'rgba(253,111,47,0.15)', color: '#FD6F2F', border: '1px solid rgba(253,111,47,0.25)' }}
+                                >
+                                  {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                                <span className="text-xs hidden sm:block" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                  {new Date(voter.voted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {/* Expand/collapse chevron */}
+                                <button
+                                  onClick={() => setExpandedVoter(isExpanded ? null : voter.name)}
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all"
+                                  style={{
+                                    background: isExpanded ? 'rgba(253,111,47,0.2)' : 'rgba(255,255,255,0.07)',
+                                    color: isExpanded ? '#FD6F2F' : 'rgba(255,255,255,0.4)',
+                                    border: isExpanded ? '1px solid rgba(253,111,47,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                                  }}
+                                  title={isExpanded ? 'Collapse ballot' : 'View ballot'}
+                                >
+                                  {isExpanded ? '▲' : '▼'}
+                                </button>
+                                {/* Delete button */}
+                                <button
+                                  onClick={() => setConfirmDelete(voter.name)}
+                                  className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+                                  style={{
+                                    background: 'rgba(220,50,50,0.12)',
+                                    color: '#FF6B6B',
+                                    border: '1px solid rgba(220,50,50,0.25)',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(220,50,50,0.25)';
+                                    e.currentTarget.style.borderColor = 'rgba(220,50,50,0.5)';
+                                    e.currentTarget.style.color = '#FF4444';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(220,50,50,0.12)';
+                                    e.currentTarget.style.borderColor = 'rgba(220,50,50,0.25)';
+                                    e.currentTarget.style.color = '#FF6B6B';
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
-                            <span className="text-sm font-medium text-white">{voter.name}</span>
+
+                            {/* Expanded ballot panel */}
+                            {isExpanded && (
+                              <div
+                                className="mt-1 mb-1 rounded-xl p-4"
+                                style={{
+                                  background: 'rgba(10,25,40,0.6)',
+                                  border: '1px solid rgba(253,111,47,0.15)',
+                                  marginLeft: '8px',
+                                  marginRight: '8px',
+                                }}
+                              >
+                                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                                  Complete Ballot
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {CATEGORIES_ORDER.map(catId => {
+                                    const nominees = breakdown[catId];
+                                    const hasVotes = nominees && nominees.length > 0;
+                                    return (
+                                      <div
+                                        key={catId}
+                                        className="rounded-lg p-3"
+                                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                                      >
+                                        <div className="text-xs font-bold mb-1.5" style={{ color: '#FD6F2F' }}>
+                                          {CATEGORY_DISPLAY[catId]}
+                                        </div>
+                                        <div className="text-xs" style={{ color: hasVotes ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)' }}>
+                                          {hasVotes ? nominees.join(', ') : '—'}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                            {new Date(voter.voted_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

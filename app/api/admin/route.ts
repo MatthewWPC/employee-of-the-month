@@ -1,53 +1,46 @@
 import { NextResponse } from 'next/server';
 import { sql, initializeSchema } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await initializeSchema();
 
-    const votersResult = await sql`
-      SELECT name, voted_at FROM voters ORDER BY voted_at DESC
-    `;
-    const voters = votersResult.rows as { name: string; voted_at: string }[];
+    const voters = await sql`SELECT name, voted_at FROM voters ORDER BY voted_at DESC` as { name: string; voted_at: string }[];
 
-    const voteRowsResult = await sql`
-      SELECT category, nominee, COUNT(*)::int AS count
-      FROM votes
-      GROUP BY category, nominee
-      ORDER BY category, count DESC
-    `;
+    // Single query to get all vote rows — we'll compute everything in JS
+    const rawVotes = await sql`SELECT voter_name, category, nominee FROM votes ORDER BY voter_name, category, nominee` as { voter_name: string; category: string; nominee: string }[];
 
+    // Build all aggregates from rawVotes in one pass
     const votesByCategory: Record<string, Record<string, number>> = {};
-    for (const row of voteRowsResult.rows as { category: string; nominee: string; count: number }[]) {
-      if (!votesByCategory[row.category]) votesByCategory[row.category] = {};
-      votesByCategory[row.category][row.nominee] = row.count;
-    }
-
-    const totalRowsResult = await sql`
-      SELECT nominee, COUNT(*)::int AS count
-      FROM votes
-      GROUP BY nominee
-      ORDER BY count DESC
-    `;
-
     const totalByNominee: Record<string, number> = {};
-    for (const row of totalRowsResult.rows as { nominee: string; count: number }[]) {
-      totalByNominee[row.nominee] = row.count;
+    const voterBreakdown: Record<string, Record<string, string[]>> = {};
+    const voteCountPerVoter: Record<string, number> = {};
+
+    for (const { voter_name, category, nominee } of rawVotes) {
+      // votesByCategory
+      if (!votesByCategory[category]) votesByCategory[category] = {};
+      votesByCategory[category][nominee] = (votesByCategory[category][nominee] ?? 0) + 1;
+
+      // totalByNominee
+      totalByNominee[nominee] = (totalByNominee[nominee] ?? 0) + 1;
+
+      // voterBreakdown
+      if (!voterBreakdown[voter_name]) voterBreakdown[voter_name] = {};
+      if (!voterBreakdown[voter_name][category]) voterBreakdown[voter_name][category] = [];
+      voterBreakdown[voter_name][category].push(nominee);
+
+      // voteCountPerVoter
+      voteCountPerVoter[voter_name] = (voteCountPerVoter[voter_name] ?? 0) + 1;
     }
 
-    const interactionsResult = await sql`
-      SELECT voter_name, about_person, description, created_at
-      FROM interactions
-      ORDER BY created_at DESC
-    `;
-    const interactions = interactionsResult.rows as {
-      voter_name: string; about_person: string; description: string; created_at: string;
-    }[];
+    const interactions = await sql`SELECT voter_name, about_person, description, created_at FROM interactions ORDER BY created_at DESC` as { voter_name: string; about_person: string; description: string; created_at: string }[];
 
-    const countResult = await sql`SELECT COUNT(*)::int AS count FROM votes`;
-    const totalVotesCount = (countResult.rows[0] as { count: number }).count;
-
-    return NextResponse.json({ voters, votesByCategory, totalByNominee, interactions, totalVotesCount });
+    return NextResponse.json(
+      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, totalVotesCount: rawVotes.length },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    );
   } catch (error) {
     console.error('Admin error:', error);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

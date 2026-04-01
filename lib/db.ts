@@ -1,4 +1,8 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+
+// neon() creates a fresh HTTP connection per call — no pool state issues
+const connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL ?? '';
+export const sql = neon(connectionString);
 
 export async function initializeSchema() {
   await sql`
@@ -27,5 +31,3 @@ export async function initializeSchema() {
     )
   `;
 }
-
-export { sql };

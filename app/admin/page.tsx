@@ -59,40 +59,75 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'interactions' | 'voters'>('overview');
   const [expandedVoter, setExpandedVoter] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
 
-  const refreshData = () => {
+  const fetchData = (isInitial = false) => {
     fetch('/api/admin', { cache: 'no-store' })
       .then(r => r.json())
-      .then(d => setData(d))
-      .catch(() => {});
+      .then(d => { setData(d); if (isInitial) setLoading(false); })
+      .catch(() => { if (isInitial) setLoading(false); });
   };
 
   useEffect(() => {
-    fetch('/api/admin', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+    fetchData(true);
+    // Poll every 8 seconds so new votes from voters appear without a manual refresh
+    const interval = setInterval(() => fetchData(false), 8000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleDelete = async (voterName: string) => {
-    setDeleting(voterName);
-    try {
-      const res = await fetch('/api/admin/delete-voter', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voterName }),
-      });
-      if (res.ok) {
-        if (expandedVoter === voterName) setExpandedVoter(null);
-        refreshData();
+  const handleDelete = (voterName: string) => {
+    setConfirmDelete(null);
+    if (expandedVoter === voterName) setExpandedVoter(null);
+
+    // Optimistic update — remove the voter and all their data from local state immediately
+    setData(prev => {
+      if (!prev) return prev;
+
+      const breakdown = prev.voterBreakdown[voterName] ?? {};
+      const voterVoteCount = prev.voteCountPerVoter[voterName] ?? 0;
+
+      // Deep-copy mutable structures
+      const newVotesByCategory: typeof prev.votesByCategory = {};
+      for (const [cat, nominees] of Object.entries(prev.votesByCategory)) {
+        newVotesByCategory[cat] = { ...nominees };
       }
-    } catch {
-      // silent
-    } finally {
-      setDeleting(null);
-      setConfirmDelete(null);
-    }
+      const newTotalByNominee = { ...prev.totalByNominee };
+
+      // Subtract this voter's votes from each category and from the overall tally
+      for (const [cat, nominees] of Object.entries(breakdown)) {
+        for (const nominee of nominees) {
+          if (newVotesByCategory[cat]) {
+            newVotesByCategory[cat][nominee] = (newVotesByCategory[cat][nominee] ?? 1) - 1;
+            if (newVotesByCategory[cat][nominee] <= 0) delete newVotesByCategory[cat][nominee];
+          }
+          newTotalByNominee[nominee] = (newTotalByNominee[nominee] ?? 1) - 1;
+          if (newTotalByNominee[nominee] <= 0) delete newTotalByNominee[nominee];
+        }
+      }
+
+      const newVoterBreakdown = { ...prev.voterBreakdown };
+      delete newVoterBreakdown[voterName];
+
+      const newVoteCountPerVoter = { ...prev.voteCountPerVoter };
+      delete newVoteCountPerVoter[voterName];
+
+      return {
+        ...prev,
+        voters: prev.voters.filter(v => v.name !== voterName),
+        votesByCategory: newVotesByCategory,
+        totalByNominee: newTotalByNominee,
+        voterBreakdown: newVoterBreakdown,
+        voteCountPerVoter: newVoteCountPerVoter,
+        interactions: prev.interactions.filter(i => i.voter_name !== voterName),
+        totalVotesCount: prev.totalVotesCount - voterVoteCount,
+      };
+    });
+
+    // Fire the actual delete in the background — no waiting, no spinner
+    fetch('/api/admin/delete-voter', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voterName }),
+    }).catch(() => {});
   };
 
   const leaderboardData = data
@@ -374,16 +409,15 @@ export default function AdminPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(confirmDelete)}
-                          disabled={deleting === confirmDelete}
                           className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-white"
                           style={{
-                            background: deleting === confirmDelete ? 'rgba(220,50,50,0.5)' : '#DC3232',
-                            boxShadow: deleting === confirmDelete ? 'none' : '0 4px 16px rgba(220,50,50,0.35)',
+                            background: '#DC3232',
+                            boxShadow: '0 4px 16px rgba(220,50,50,0.35)',
                           }}
-                          onMouseEnter={(e) => { if (deleting !== confirmDelete) e.currentTarget.style.background = '#C42B2B'; }}
-                          onMouseLeave={(e) => { if (deleting !== confirmDelete) e.currentTarget.style.background = '#DC3232'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#C42B2B'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = '#DC3232'; }}
                         >
-                          {deleting === confirmDelete ? 'Deleting…' : 'Yes, Delete'}
+                          Yes, Delete
                         </button>
                       </div>
                     </div>

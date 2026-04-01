@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WealthPoint | Employee of the Month',
-  description: 'WealthPoint Capital Employee of the Month Voting Portal',
+  title: 'WealthPoint | Employee of the Quarter',
+  description: 'WealthPoint Capital Employee of the Quarter Voting Portal',
 };
 
 export default function RootLayout({

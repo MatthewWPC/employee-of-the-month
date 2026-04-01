@@ -177,7 +177,7 @@ export default function VotePage() {
             Thank you, <strong className="text-white">{voterName}</strong>.
           </p>
           <p className="mb-8" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Your nominations have been recorded. Results will be announced at the end of the month.
+            Your nominations have been recorded. Results will be announced at the end of the quarter.
           </p>
           <button
             onClick={() => router.push('/')}
@@ -209,7 +209,7 @@ export default function VotePage() {
             style={{ height: '36px', width: 'auto', maxWidth: '160px', display: 'block', filter: 'brightness(1.15)' }}
           />
           <p className="font-semibold text-sm hidden sm:block" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Employee of the Month
+            Employee of the Quarter
           </p>
         </div>
         <div className="text-right">
@@ -335,7 +335,7 @@ export default function VotePage() {
               }}
             >
               <h3 className="font-bold text-lg mb-1" style={{ color: '#FD6F2F' }}>A Memorable Interaction</h3>
-              <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>Share a specific moment that stood out to you this month.</p>
+              <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>Share a specific moment that stood out to you this quarter.</p>
 
               <div className="space-y-4">
                 <div>

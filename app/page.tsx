@@ -87,7 +87,7 @@ export default function HomePage() {
             </span>
           </h1>
           <p className="text-sm tracking-widest uppercase font-light" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Employee of the Month Awards
+            Employee of the Quarter Awards
           </p>
         </div>
 
@@ -172,7 +172,7 @@ export default function HomePage() {
           className="mt-8 text-center text-xs animate-fade-in-up"
           style={{ color: 'rgba(255,255,255,0.2)', animationDelay: '0.45s', letterSpacing: '0.05em' }}
         >
-          Your votes are confidential and contribute to our monthly recognition.
+          Your votes are confidential and contribute to our quarterly recognition.
         </p>
       </div>
     </main>

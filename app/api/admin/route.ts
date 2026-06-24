@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
+import { isAuthorized } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   noStore(); // Opt out of Next.js data cache — ensures SQL queries hit the live DB every time
   try {
     await initializeSchema();

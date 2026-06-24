@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -54,25 +54,76 @@ function StatCard({ label, value, icon }: { label: string; value: string | numbe
 
 export default function AdminPage() {
   const router = useRouter();
-  const [data, setData] = useState<AdminData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'interactions' | 'voters'>('overview');
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const [password, setPassword]         = useState<string | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError]       = useState('');
+  const [authChecking, setAuthChecking] = useState(false);
+  // Ref keeps password accessible inside stable callbacks without stale closures
+  const passwordRef = useRef<string | null>(null);
+  passwordRef.current = password;
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  const [data, setData]                 = useState<AdminData | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [activeTab, setActiveTab]       = useState<'overview' | 'categories' | 'interactions' | 'voters'>('overview');
   const [expandedVoter, setExpandedVoter] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  const fetchData = (isInitial = false) => {
-    fetch('/api/admin', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(d => { setData(d); if (isInitial) setLoading(false); })
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  const [showReset, setShowReset]   = useState(false);
+  const [resetText, setResetText]   = useState('');
+  const [resetting, setResetting]   = useState(false);
+
+  const fetchData = useCallback((isInitial = false) => {
+    const token = passwordRef.current;
+    if (!token) return;
+    fetch('/api/admin', {
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then(r => {
+        if (r.status === 401) { setPassword(null); if (isInitial) setLoading(false); return null; }
+        return r.json();
+      })
+      .then(d => { if (d) { setData(d); if (isInitial) setLoading(false); } })
       .catch(() => { if (isInitial) setLoading(false); });
-  };
+  }, []);
 
   useEffect(() => {
+    if (!password) return;
+    setLoading(true);
     fetchData(true);
     // Poll every 8 seconds so new votes from voters appear without a manual refresh
     const interval = setInterval(() => fetchData(false), 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [password, fetchData]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pw = passwordInput.trim();
+    if (!pw) return;
+    setAuthChecking(true);
+    setAuthError('');
+    fetch('/api/admin', {
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${pw}` },
+    })
+      .then(r => {
+        setAuthChecking(false);
+        if (r.ok) {
+          setPassword(pw);
+          setPasswordInput('');
+        } else {
+          setAuthError('Incorrect password. Please try again.');
+        }
+      })
+      .catch(() => {
+        setAuthChecking(false);
+        setAuthError('Connection error. Please try again.');
+      });
+  };
 
   const handleDelete = (voterName: string) => {
     setConfirmDelete(null);
@@ -125,9 +176,42 @@ export default function AdminPage() {
     // Fire the actual delete in the background — no waiting, no spinner
     fetch('/api/admin/delete-voter', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${passwordRef.current ?? ''}`,
+      },
       body: JSON.stringify({ voterName }),
     }).catch(() => {});
+  };
+
+  const handleReset = () => {
+    setResetting(true);
+    fetch('/api/admin/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${passwordRef.current ?? ''}`,
+      },
+      body: JSON.stringify({ confirm: 'RESET' }),
+    })
+      .then(r => {
+        if (r.status === 401) { setPassword(null); setResetting(false); return null; }
+        return r.json();
+      })
+      .then(d => {
+        setResetting(false);
+        if (d?.success) {
+          setShowReset(false);
+          setResetText('');
+          fetchData(true);
+        } else {
+          alert('Reset failed — nothing was changed.');
+        }
+      })
+      .catch(() => {
+        setResetting(false);
+        alert('Reset failed — nothing was changed.');
+      });
   };
 
   const leaderboardData = data
@@ -141,6 +225,63 @@ export default function AdminPage() {
     { id: 'voters',        label: 'Voters' },
   ] as const;
 
+  // ── Password prompt screen ────────────────────────────────────────────────
+  if (!password) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#0F2540' }}>
+        <div
+          className="w-full max-w-sm rounded-2xl p-8"
+          style={{
+            background: '#122E4C',
+            border: '1px solid rgba(204,204,204,0.1)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+          }}
+        >
+          <div className="flex justify-center mb-6">
+            <img
+              src="/logo-transparent.png"
+              alt="WealthPoint Capital"
+              style={{ height: '40px', width: 'auto', filter: 'brightness(1.15)' }}
+            />
+          </div>
+          <h1 className="text-xl font-bold text-white text-center mb-1">Admin Dashboard</h1>
+          <p className="text-sm text-center mb-6" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            Enter the admin password to continue.
+          </p>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              placeholder="Password"
+              value={passwordInput}
+              onChange={e => { setPasswordInput(e.target.value); setAuthError(''); }}
+              className="w-full px-4 py-3 rounded-xl text-sm text-white outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.07)',
+                border: `1px solid ${authError ? 'rgba(220,50,50,0.5)' : 'rgba(255,255,255,0.12)'}`,
+              }}
+              autoFocus
+            />
+            {authError && (
+              <p className="text-xs" style={{ color: '#FF6B6B' }}>{authError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={authChecking || !passwordInput.trim()}
+              className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all"
+              style={{
+                background: authChecking ? 'rgba(253,111,47,0.5)' : '#FD6F2F',
+                boxShadow: authChecking ? 'none' : '0 4px 16px rgba(253,111,47,0.3)',
+              }}
+            >
+              {authChecking ? 'Checking…' : 'Sign In'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen" style={{ background: '#0F2540' }}>
       {/* Header */}
@@ -160,18 +301,107 @@ export default function AdminPage() {
           />
           <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
         </div>
-        <button
-          onClick={() => router.push('/')}
-          className="text-sm transition-colors flex items-center gap-1"
-          style={{ color: 'rgba(255,255,255,0.5)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
-        >
-          ← Back to Home
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowReset(true)}
+            className="text-sm font-semibold px-4 py-2 rounded-xl transition-all"
+            style={{
+              background: 'rgba(220,50,50,0.12)',
+              color: '#FF6B6B',
+              border: '1px solid rgba(220,50,50,0.25)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(220,50,50,0.25)';
+              e.currentTarget.style.borderColor = 'rgba(220,50,50,0.5)';
+              e.currentTarget.style.color = '#FF4444';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(220,50,50,0.12)';
+              e.currentTarget.style.borderColor = 'rgba(220,50,50,0.25)';
+              e.currentTarget.style.color = '#FF6B6B';
+            }}
+          >
+            Reset Quarter
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            className="text-sm transition-colors flex items-center gap-1"
+            style={{ color: 'rgba(255,255,255,0.5)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+          >
+            ← Back to Home
+          </button>
+        </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Reset Quarter confirmation modal — shown on any tab */}
+        {showReset && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          >
+            <div
+              className="rounded-2xl p-6 max-w-sm w-full animate-scale-in"
+              style={{
+                background: '#122E4C',
+                border: '1px solid rgba(220,50,50,0.3)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div className="text-2xl mb-3">⚠️</div>
+              <h3 className="font-bold text-white text-base mb-2">Reset this quarter?</h3>
+              <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                This will permanently wipe <strong className="text-white">all votes, voters, and interactions</strong>. The data cannot be recovered.
+              </p>
+              <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                Type <strong style={{ color: '#FF6B6B' }}>RESET</strong> below to confirm.
+              </p>
+              <input
+                type="text"
+                placeholder="RESET"
+                value={resetText}
+                onChange={e => setResetText(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none mb-4"
+                style={{
+                  background: 'rgba(255,255,255,0.07)',
+                  border: '1px solid rgba(220,50,50,0.25)',
+                }}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowReset(false); setResetText(''); }}
+                  disabled={resetting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                  style={{
+                    background: 'rgba(255,255,255,0.07)',
+                    color: 'rgba(255,255,255,0.7)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReset}
+                  disabled={resetText !== 'RESET' || resetting}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all text-white"
+                  style={{
+                    background: resetText === 'RESET' && !resetting ? '#DC3232' : 'rgba(220,50,50,0.3)',
+                    boxShadow: resetText === 'RESET' && !resetting ? '0 4px 16px rgba(220,50,50,0.35)' : 'none',
+                  }}
+                  onMouseEnter={(e) => { if (resetText === 'RESET' && !resetting) e.currentTarget.style.background = '#C42B2B'; }}
+                  onMouseLeave={(e) => { if (resetText === 'RESET' && !resetting) e.currentTarget.style.background = '#DC3232'; }}
+                >
+                  {resetting ? 'Resetting…' : 'Yes, Reset Quarter'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-24" style={{ color: 'rgba(255,255,255,0.4)' }}>Loading results…</div>
         ) : !data ? (

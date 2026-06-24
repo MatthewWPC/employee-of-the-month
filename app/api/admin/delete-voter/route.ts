@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql } from '@/lib/db';
+import { isAuthorized } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function DELETE(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   noStore();
   try {
     const { voterName } = await request.json();

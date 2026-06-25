@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QUARTERS, type Quarter } from '@/lib/winners';
 
@@ -75,10 +75,26 @@ function WinnerCard({ quarter }: { quarter: Quarter }) {
 }
 
 export default function HomePage() {
-  const [name, setName] = useState('');
+  const [name, setName]       = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [admired, setAdmired] = useState(false);
   const router = useRouter();
+
+  const nameInputRef  = useRef<HTMLInputElement>(null);
+  const wallSectionRef = useRef<HTMLElement>(null);
+
+  // Auto-admire once the Wall of Fame section has scrolled into view (≥50% visible)
+  useEffect(() => {
+    const section = wallSectionRef.current;
+    if (!section) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setAdmired(true); },
+      { threshold: 0.5 }
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
 
   const handleBeginVoting = async () => {
     const trimmedName = name.trim();
@@ -112,6 +128,17 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  // Called by the explicit admire button at the bottom of the wall
+  const handleAdmire = () => {
+    setAdmired(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Focus the name input once the scroll has settled
+    setTimeout(() => nameInputRef.current?.focus(), 600);
+  };
+
+  // Shared disabled / muted state for the Begin Voting button
+  const btnDisabled = loading || !admired;
 
   return (
     <>
@@ -180,6 +207,7 @@ export default function HomePage() {
               Your Full Name
             </label>
             <input
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setError(''); }}
@@ -216,29 +244,39 @@ export default function HomePage() {
 
             <button
               onClick={handleBeginVoting}
-              disabled={loading}
+              disabled={btnDisabled}
               className="w-full font-bold py-4 rounded-xl transition-all duration-200 text-base tracking-wide text-white"
               style={{
-                background: loading ? 'rgba(253,111,47,0.4)' : '#FD6F2F',
-                boxShadow: loading ? 'none' : '0 8px 28px rgba(253,111,47,0.35)',
+                background: btnDisabled ? 'rgba(253,111,47,0.4)' : '#FD6F2F',
+                boxShadow: btnDisabled ? 'none' : '0 8px 28px rgba(253,111,47,0.35)',
               }}
               onMouseEnter={(e) => {
-                if (!loading) {
+                if (!btnDisabled) {
                   e.currentTarget.style.background = '#ff8c52';
                   e.currentTarget.style.transform = 'scale(1.02)';
                   e.currentTarget.style.boxShadow = '0 12px 36px rgba(253,111,47,0.45)';
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = loading ? 'rgba(253,111,47,0.4)' : '#FD6F2F';
+                e.currentTarget.style.background = btnDisabled ? 'rgba(253,111,47,0.4)' : '#FD6F2F';
                 e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = loading ? 'none' : '0 8px 28px rgba(253,111,47,0.35)';
+                e.currentTarget.style.boxShadow = btnDisabled ? 'none' : '0 8px 28px rgba(253,111,47,0.35)';
               }}
               onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
               onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
             >
               {loading ? 'Checking…' : 'Begin Voting →'}
             </button>
+
+            {/* Gate helper line */}
+            <p
+              className="mt-3 text-center text-xs"
+              style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.03em' }}
+            >
+              {admired
+                ? 'Thank you for admiring. You may now vote.'
+                : 'Scroll down and admire the Wall of Fame before you vote.'}
+            </p>
           </div>
 
           <p
@@ -252,6 +290,7 @@ export default function HomePage() {
 
       {/* ── Wall of Fame ─────────────────────────────────────────────────── */}
       <section
+        ref={wallSectionRef}
         className="py-16 px-4"
         style={{
           background: '#0A1928',
@@ -269,6 +308,32 @@ export default function HomePage() {
             {QUARTERS.map(q => (
               <WinnerCard key={q.id} quarter={q} />
             ))}
+          </div>
+
+          {/* Admire button */}
+          <div className="mt-10 flex justify-center">
+            <button
+              onClick={handleAdmire}
+              className="font-bold py-4 px-8 rounded-xl transition-all duration-200 text-base tracking-wide text-white"
+              style={{
+                background: '#FD6F2F',
+                boxShadow: '0 8px 28px rgba(253,111,47,0.35)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#ff8c52';
+                e.currentTarget.style.transform = 'scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 12px 36px rgba(253,111,47,0.45)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#FD6F2F';
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 8px 28px rgba(253,111,47,0.35)';
+              }}
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.98)'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
+            >
+              I have admired the Wall of Fame, let me vote
+            </button>
           </div>
         </div>
       </section>

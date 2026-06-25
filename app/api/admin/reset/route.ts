@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
-import { sql } from '@/lib/db';
+import { sql, initializeSchema } from '@/lib/db';
 import { isAuthorized } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
   }
   noStore();
   try {
+    await initializeSchema();
     const body = await request.json();
     if (body.confirm !== 'RESET') {
       return NextResponse.json({ error: 'Confirmation required' }, { status: 400 });

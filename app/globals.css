@@ -25,6 +25,13 @@ html {
 .animate-fade-in     { animation: fadeIn    0.5s ease-out both; }
 .animate-scale-in    { animation: scaleIn   0.4s ease-out both; }
 
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(7px); }
+}
+
+.animate-bounce-down { animation: bounceDown 1.5s ease-in-out infinite; }
+
 ::-webkit-scrollbar       { width: 6px; }
 ::-webkit-scrollbar-track { background: #0A1928; }
 ::-webkit-scrollbar-thumb { background: #FD6F2F; border-radius: 3px; }

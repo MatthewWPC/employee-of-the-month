@@ -269,14 +269,26 @@ export default function HomePage() {
             </button>
 
             {/* Gate helper line */}
-            <p
-              className="mt-3 text-center text-xs"
-              style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.03em' }}
-            >
-              {admired
-                ? 'Thank you for admiring. You may now vote.'
-                : 'Scroll down and admire the Wall of Fame before you vote.'}
-            </p>
+            {admired ? (
+              <p
+                className="mt-3 text-center text-xs"
+                style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.03em' }}
+              >
+                Thank you for admiring. You may now vote.
+              </p>
+            ) : (
+              <div
+                className="mt-4 px-4 py-3 rounded-xl text-center text-sm font-bold tracking-wide flex items-center justify-center gap-2"
+                style={{
+                  background: 'rgba(253,111,47,0.12)',
+                  border: '1px solid rgba(253,111,47,0.5)',
+                  color: '#FD6F2F',
+                }}
+              >
+                SCROLL DOWN AND ADMIRE THE WALL OF FAME FIRST
+                <span className="animate-bounce-down" aria-hidden="true">↓</span>
+              </div>
+            )}
           </div>
 
           <p

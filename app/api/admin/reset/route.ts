@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       SELECT id, voter_name, about_person, description, created_at, ${label} FROM interactions
     `;
     await sql`
-      INSERT INTO gees_archive (id, voter_name, content, image, created_at, archive_label)
-      SELECT id, voter_name, content, image, created_at, ${label} FROM gees
+      INSERT INTO gees_archive (id, voter_name, fined_person, content, image, created_at, archive_label)
+      SELECT id, voter_name, fined_person, content, image, created_at, ${label} FROM gees
     `;
 
     // All archives succeeded — safe to clear the live tables

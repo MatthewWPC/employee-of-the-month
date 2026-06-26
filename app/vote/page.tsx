@@ -128,6 +128,7 @@ export default function VotePage() {
   const [votes, setVotes] = useState<VoteState>({});
   const [interaction, setInteraction] = useState({ aboutPerson: '', description: '' });
   const [gees, setGees] = useState('');
+  const [geesFined, setGeesFined] = useState('');
   const [geesImage, setGeesImage] = useState<string | null>(null);
   const [geesImageBusy, setGeesImageBusy] = useState(false);
   const [geesImageError, setGeesImageError] = useState('');
@@ -190,6 +191,7 @@ export default function VotePage() {
           interaction: interaction.aboutPerson && interaction.description ? interaction : undefined,
           gees: gees.trim() || undefined,
           geesImage: geesImage || undefined,
+          geesFined: geesFined || undefined,
         }),
       });
 
@@ -441,33 +443,54 @@ export default function VotePage() {
                 animationDelay: `${(CATEGORIES.length + 1) * 0.04}s`,
               }}
             >
-              <h3 className="font-bold text-lg mb-1" style={{ color: '#FD6F2F' }}>For the Gees 😎</h3>
+              <h3 className="font-bold text-lg mb-1" style={{ color: '#FD6F2F' }}>The Fines 🚨</h3>
               <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                Not a vote and not necessary. Purely here for anything the categories missed. Share a funny moment, a messy desk award, a filthy mullet trophy, whatever. None of this counts toward votes.
+                Just for the gees. Nominate someone on the team for a fine. You don&apos;t need to write a reason. None of this counts toward votes.
               </p>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-white">Drop it here for the gees…</label>
-                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{gees.length}/500</span>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Who&apos;s getting fined?</label>
+                  <select
+                    value={geesFined}
+                    onChange={(e) => setGeesFined(e.target.value)}
+                    className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none appearance-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.07)',
+                      border: '1px solid rgba(204,204,204,0.2)',
+                      color: geesFined ? 'white' : 'rgba(255,255,255,0.35)',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(253,111,47,0.5)'; }}
+                    onBlur={(e)  => { e.currentTarget.style.border = '1px solid rgba(204,204,204,0.2)'; }}
+                  >
+                    <option value="" style={{ background: '#122E4C', color: 'rgba(255,255,255,0.5)' }}>Select a team member…</option>
+                    {TEAM_MEMBERS.map(m => <option key={m} value={m} style={{ background: '#122E4C', color: 'white' }}>{m}</option>)}
+                  </select>
                 </div>
-                <textarea
-                  value={gees}
-                  onChange={(e) => setGees(e.target.value.slice(0, 500))}
-                  placeholder="Drop it here for the gees…"
-                  rows={4}
-                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none resize-none"
-                  style={{
-                    background: 'rgba(255,255,255,0.07)',
-                    border: '1px solid rgba(204,204,204,0.2)',
-                    color: 'white',
-                  }}
-                  onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(253,111,47,0.5)'; }}
-                  onBlur={(e)  => { e.currentTarget.style.border = '1px solid rgba(204,204,204,0.2)'; }}
-                />
 
-                {/* Optional image attachment */}
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-white mb-2">Attach an image (optional)</label>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-white">Reason (optional)</label>
+                    <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{gees.length}/500</span>
+                  </div>
+                  <textarea
+                    value={gees}
+                    onChange={(e) => setGees(e.target.value.slice(0, 500))}
+                    placeholder="What did they do? (optional, purely for the gees)"
+                    rows={3}
+                    className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none resize-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.07)',
+                      border: '1px solid rgba(204,204,204,0.2)',
+                      color: 'white',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(253,111,47,0.5)'; }}
+                    onBlur={(e)  => { e.currentTarget.style.border = '1px solid rgba(204,204,204,0.2)'; }}
+                  />
+                </div>
+
+                {/* Optional evidence image */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Evidence (optional)</label>
                   {!geesImage ? (
                     <label
                       className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm cursor-pointer transition-all"

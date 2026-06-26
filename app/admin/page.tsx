@@ -29,7 +29,7 @@ type AdminData = {
   voterBreakdown: Record<string, Record<string, string[]>>;
   voteCountPerVoter: Record<string, number>;
   interactions: { voter_name: string; about_person: string; description: string; created_at: string }[];
-  gees: { voter_name: string; content: string; image?: string | null; created_at: string }[];
+  gees: { voter_name: string; fined_person?: string | null; content: string; image?: string | null; created_at: string }[];
   totalVotesCount: number;
 };
 
@@ -684,11 +684,11 @@ export default function AdminPage() {
 
                 {/* For the Gees */}
                 <div className="space-y-4">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>For the Gees 😎</h2>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>The Fines 🚨 (for the gees)</h2>
                   {data.gees.length === 0 ? (
                     <div className="rounded-2xl p-8 text-center" style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}>
-                      <div className="text-3xl mb-2">😎</div>
-                      <p style={{ color: 'rgba(255,255,255,0.35)' }}>Nothing for the gees yet.</p>
+                      <div className="text-3xl mb-2">🚨</div>
+                      <p style={{ color: 'rgba(255,255,255,0.35)' }}>No fines handed out yet.</p>
                     </div>
                   ) : (
                     data.gees.map((item, i) => (
@@ -698,7 +698,17 @@ export default function AdminPage() {
                         style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}
                       >
                         <div className="flex items-start justify-between mb-3">
-                          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Submitted by {item.voter_name}</div>
+                          <div>
+                            {item.fined_person && (
+                              <span
+                                className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-1"
+                                style={{ background: 'rgba(253,111,47,0.15)', color: '#FD6F2F', border: '1px solid rgba(253,111,47,0.25)' }}
+                              >
+                                🚨 Fine: {item.fined_person}
+                              </span>
+                            )}
+                            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Issued by {item.voter_name}</div>
+                          </div>
                           <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
                             {new Date(item.created_at).toLocaleDateString()}
                           </span>
@@ -709,7 +719,7 @@ export default function AdminPage() {
                         {item.image && (
                           <img
                             src={item.image}
-                            alt={`For the gees from ${item.voter_name}`}
+                            alt={`Fine evidence from ${item.voter_name}`}
                             style={{
                               marginTop: item.content ? '0.75rem' : 0,
                               maxWidth: '100%',

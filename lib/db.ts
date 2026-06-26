@@ -84,4 +84,8 @@ export async function initializeSchema() {
   // Optional image attachment for "For the Gees" (base64 data URL). Idempotent.
   await sql`ALTER TABLE gees ADD COLUMN IF NOT EXISTS image TEXT`;
   await sql`ALTER TABLE gees_archive ADD COLUMN IF NOT EXISTS image TEXT`;
+
+  // Who the fine is issued against (the nominated team member). Idempotent.
+  await sql`ALTER TABLE gees ADD COLUMN IF NOT EXISTS fined_person TEXT`;
+  await sql`ALTER TABLE gees_archive ADD COLUMN IF NOT EXISTS fined_person TEXT`;
 }

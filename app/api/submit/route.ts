@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   noStore();
   try {
     const body = await request.json();
-    const { voterName, votes, interaction, gees, geesImage } = body;
+    const { voterName, votes, interaction, gees, geesImage, geesFined } = body;
 
     if (!voterName || typeof voterName !== 'string') {
       return NextResponse.json({ error: 'Invalid voter name' }, { status: 400 });
@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
       `;
     }
 
+    const finedPerson = typeof geesFined === 'string' ? geesFined.trim().slice(0, 120) : '';
     const geesText = typeof gees === 'string' ? gees.trim().slice(0, 500) : '';
     const geesImg =
       typeof geesImage === 'string' &&
@@ -46,8 +47,9 @@ export async function POST(request: NextRequest) {
       geesImage.length < 5_000_000
         ? geesImage
         : null;
-    if (geesText || geesImg) {
-      await sql`INSERT INTO gees (voter_name, content, image) VALUES (${name}, ${geesText}, ${geesImg})`;
+    // A fine only counts if someone was nominated. Reason and evidence are optional.
+    if (finedPerson) {
+      await sql`INSERT INTO gees (voter_name, fined_person, content, image) VALUES (${name}, ${finedPerson}, ${geesText}, ${geesImg})`;
     }
 
     return NextResponse.json({ success: true });

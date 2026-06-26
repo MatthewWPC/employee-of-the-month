@@ -80,4 +80,8 @@ export async function initializeSchema() {
       archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  // Optional image attachment for "For the Gees" (base64 data URL). Idempotent.
+  await sql`ALTER TABLE gees ADD COLUMN IF NOT EXISTS image TEXT`;
+  await sql`ALTER TABLE gees_archive ADD COLUMN IF NOT EXISTS image TEXT`;
 }

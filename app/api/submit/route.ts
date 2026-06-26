@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   noStore();
   try {
     const body = await request.json();
-    const { voterName, votes, interaction, gees } = body;
+    const { voterName, votes, interaction, gees, geesImage } = body;
 
     if (!voterName || typeof voterName !== 'string') {
       return NextResponse.json({ error: 'Invalid voter name' }, { status: 400 });
@@ -39,8 +39,15 @@ export async function POST(request: NextRequest) {
       `;
     }
 
-    if (typeof gees === 'string' && gees.trim()) {
-      await sql`INSERT INTO gees (voter_name, content) VALUES (${name}, ${gees.trim().slice(0, 500)})`;
+    const geesText = typeof gees === 'string' ? gees.trim().slice(0, 500) : '';
+    const geesImg =
+      typeof geesImage === 'string' &&
+      geesImage.startsWith('data:image/') &&
+      geesImage.length < 5_000_000
+        ? geesImage
+        : null;
+    if (geesText || geesImg) {
+      await sql`INSERT INTO gees (voter_name, content, image) VALUES (${name}, ${geesText}, ${geesImg})`;
     }
 
     return NextResponse.json({ success: true });

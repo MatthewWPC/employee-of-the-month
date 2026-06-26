@@ -29,7 +29,7 @@ type AdminData = {
   voterBreakdown: Record<string, Record<string, string[]>>;
   voteCountPerVoter: Record<string, number>;
   interactions: { voter_name: string; about_person: string; description: string; created_at: string }[];
-  gees: { voter_name: string; content: string; created_at: string }[];
+  gees: { voter_name: string; content: string; image?: string | null; created_at: string }[];
   totalVotesCount: number;
 };
 
@@ -703,7 +703,23 @@ export default function AdminPage() {
                             {new Date(item.created_at).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>{item.content}</p>
+                        {item.content && (
+                          <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>{item.content}</p>
+                        )}
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={`For the gees from ${item.voter_name}`}
+                            style={{
+                              marginTop: item.content ? '0.75rem' : 0,
+                              maxWidth: '100%',
+                              maxHeight: '400px',
+                              borderRadius: '0.75rem',
+                              border: '1px solid rgba(204,204,204,0.1)',
+                              display: 'block',
+                            }}
+                          />
+                        )}
                       </div>
                     ))
                   )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 const TEAM_MEMBERS = [
@@ -25,6 +25,37 @@ const MEMBER_META: Record<string, { photo: string; initials: string; color: stri
   'Kira Williams':         { photo: '/team/kira.png',       initials: 'KW', color: '#1E5799' },
   'Candice Boshoff':       { photo: '/team/candice.png',    initials: 'CB', color: '#1A4F72' },
 };
+
+// Read an image file, scale it down (max 1200px on the long edge), and return a
+// JPEG data URL. Keeps the base64 payload small so it stores cleanly in Postgres.
+async function fileToResizedDataUrl(file: File, maxDim = 1200, quality = 0.82): Promise<string> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('read'));
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error('decode'));
+    i.src = dataUrl;
+  });
+  let width = img.width;
+  let height = img.height;
+  if (width > maxDim || height > maxDim) {
+    const scale = Math.min(maxDim / width, maxDim / height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('canvas');
+  ctx.drawImage(img, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', quality);
+}
 
 function MemberAvatar({ name, size = 48, selected }: { name: string; size?: number; selected: boolean }) {
   const meta = MEMBER_META[name];
@@ -97,6 +128,9 @@ export default function VotePage() {
   const [votes, setVotes] = useState<VoteState>({});
   const [interaction, setInteraction] = useState({ aboutPerson: '', description: '' });
   const [gees, setGees] = useState('');
+  const [geesImage, setGeesImage] = useState<string | null>(null);
+  const [geesImageBusy, setGeesImageBusy] = useState(false);
+  const [geesImageError, setGeesImageError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -127,6 +161,23 @@ export default function VotePage() {
     return acc;
   }, {});
 
+  const handleGeesImage = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setGeesImageError('Please choose an image file.'); return; }
+    setGeesImageError('');
+    setGeesImageBusy(true);
+    try {
+      const resized = await fileToResizedDataUrl(file);
+      setGeesImage(resized);
+    } catch {
+      setGeesImageError('Could not read that image. Try a JPG or PNG.');
+    } finally {
+      setGeesImageBusy(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
@@ -138,6 +189,7 @@ export default function VotePage() {
           votes,
           interaction: interaction.aboutPerson && interaction.description ? interaction : undefined,
           gees: gees.trim() || undefined,
+          geesImage: geesImage || undefined,
         }),
       });
 
@@ -412,6 +464,49 @@ export default function VotePage() {
                   onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(253,111,47,0.5)'; }}
                   onBlur={(e)  => { e.currentTarget.style.border = '1px solid rgba(204,204,204,0.2)'; }}
                 />
+
+                {/* Optional image attachment */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-white mb-2">Attach an image (optional)</label>
+                  {!geesImage ? (
+                    <label
+                      className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 text-sm cursor-pointer transition-all"
+                      style={{
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px dashed rgba(253,111,47,0.4)',
+                        color: 'rgba(255,255,255,0.6)',
+                      }}
+                    >
+                      <span>📎</span>
+                      <span>{geesImageBusy ? 'Processing…' : 'Choose an image'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleGeesImage}
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative inline-block">
+                      <img
+                        src={geesImage}
+                        alt="Preview"
+                        style={{ maxWidth: '100%', maxHeight: '220px', borderRadius: '0.75rem', border: '1px solid rgba(204,204,204,0.15)', display: 'block' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setGeesImage(null)}
+                        className="absolute top-2 right-2 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                        style={{ background: 'rgba(15,37,64,0.85)', border: '1px solid rgba(255,255,255,0.2)', width: '28px', height: '28px' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  {geesImageError && (
+                    <p className="text-xs mt-2" style={{ color: '#ff8c52' }}>{geesImageError}</p>
+                  )}
+                </div>
               </div>
             </div>
 

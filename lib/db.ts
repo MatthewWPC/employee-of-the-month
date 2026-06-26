@@ -61,4 +61,23 @@ export async function initializeSchema() {
       archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS gees (
+      id SERIAL PRIMARY KEY,
+      voter_name TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS gees_archive (
+      id INTEGER NOT NULL,
+      voter_name TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      archive_label TEXT NOT NULL,
+      archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
 }

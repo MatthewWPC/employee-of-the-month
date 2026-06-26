@@ -29,6 +29,7 @@ type AdminData = {
   voterBreakdown: Record<string, Record<string, string[]>>;
   voteCountPerVoter: Record<string, number>;
   interactions: { voter_name: string; about_person: string; description: string; created_at: string }[];
+  gees: { voter_name: string; content: string; created_at: string }[];
   totalVotesCount: number;
 };
 
@@ -646,37 +647,67 @@ export default function AdminPage() {
 
             {/* INTERACTIONS TAB */}
             {activeTab === 'interactions' && (
-              <div className="animate-fade-in space-y-4">
-                {data.interactions.length === 0 ? (
-                  <div className="rounded-2xl p-8 text-center" style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}>
-                    <div className="text-3xl mb-2">💬</div>
-                    <p style={{ color: 'rgba(255,255,255,0.35)' }}>No memorable interactions submitted yet.</p>
-                  </div>
-                ) : (
-                  data.interactions.map((item, i) => (
-                    <div
-                      key={i}
-                      className="rounded-2xl p-5"
-                      style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <span
-                            className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-1"
-                            style={{ background: 'rgba(253,111,47,0.15)', color: '#FD6F2F', border: '1px solid rgba(253,111,47,0.25)' }}
-                          >
-                            About: {item.about_person}
-                          </span>
-                          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Submitted by {item.voter_name}</div>
-                        </div>
-                        <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>{item.description}</p>
+              <div className="animate-fade-in space-y-6">
+                {/* Memorable Interactions */}
+                <div className="space-y-4">
+                  {data.interactions.length === 0 ? (
+                    <div className="rounded-2xl p-8 text-center" style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}>
+                      <div className="text-3xl mb-2">💬</div>
+                      <p style={{ color: 'rgba(255,255,255,0.35)' }}>No memorable interactions submitted yet.</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    data.interactions.map((item, i) => (
+                      <div
+                        key={i}
+                        className="rounded-2xl p-5"
+                        style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <span
+                              className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-1"
+                              style={{ background: 'rgba(253,111,47,0.15)', color: '#FD6F2F', border: '1px solid rgba(253,111,47,0.25)' }}
+                            >
+                              About: {item.about_person}
+                            </span>
+                            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Submitted by {item.voter_name}</div>
+                          </div>
+                          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>{item.description}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* For the Gees */}
+                <div className="space-y-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>For the Gees 😎</h2>
+                  {data.gees.length === 0 ? (
+                    <div className="rounded-2xl p-8 text-center" style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}>
+                      <div className="text-3xl mb-2">😎</div>
+                      <p style={{ color: 'rgba(255,255,255,0.35)' }}>Nothing for the gees yet.</p>
+                    </div>
+                  ) : (
+                    data.gees.map((item, i) => (
+                      <div
+                        key={i}
+                        className="rounded-2xl p-5"
+                        style={{ background: '#122E4C', border: '1px solid rgba(204,204,204,0.1)' }}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Submitted by {item.voter_name}</div>
+                          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>{item.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 

@@ -97,6 +97,7 @@ export default function VotePage() {
   const [voterName, setVoterName] = useState('');
   const [votes, setVotes] = useState<VoteState>({});
   const [interaction, setInteraction] = useState({ aboutPerson: '', description: '' });
+  const [gees, setGees] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -137,6 +138,7 @@ export default function VotePage() {
           voterName,
           votes,
           interaction: interaction.aboutPerson && interaction.description ? interaction : undefined,
+          gees: gees.trim() || undefined,
         }),
       });
 
@@ -379,8 +381,43 @@ export default function VotePage() {
               </div>
             </div>
 
+            {/* For the Gees */}
+            <div
+              className="rounded-2xl p-6 animate-fade-in-up"
+              style={{
+                background: '#122E4C',
+                border: '1px solid rgba(204,204,204,0.1)',
+                animationDelay: `${(CATEGORIES.length + 1) * 0.04}s`,
+              }}
+            >
+              <h3 className="font-bold text-lg mb-1" style={{ color: '#FD6F2F' }}>For the Gees 😎</h3>
+              <p className="text-sm mb-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                Not a vote and not necessary. Purely here for anything the categories missed. Share a funny moment, a messy desk award, a filthy mullet trophy, whatever. None of this counts toward votes.
+              </p>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-white">Drop it here for the gees…</label>
+                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>{gees.length}/500</span>
+                </div>
+                <textarea
+                  value={gees}
+                  onChange={(e) => setGees(e.target.value.slice(0, 500))}
+                  placeholder="Drop it here for the gees…"
+                  rows={4}
+                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none resize-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(204,204,204,0.2)',
+                    color: 'white',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.border = '1px solid rgba(253,111,47,0.5)'; }}
+                  onBlur={(e)  => { e.currentTarget.style.border = '1px solid rgba(204,204,204,0.2)'; }}
+                />
+              </div>
+            </div>
+
             {/* Submit */}
-            <div className="pb-10 animate-fade-in-up" style={{ animationDelay: `${(CATEGORIES.length + 1) * 0.04}s` }}>
+            <div className="pb-10 animate-fade-in-up" style={{ animationDelay: `${(CATEGORIES.length + 2) * 0.04}s` }}>
               <button
                 onClick={handleSubmit}
                 disabled={submitting}

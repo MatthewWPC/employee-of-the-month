@@ -36,9 +36,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { rows: interactions } = await sql`SELECT voter_name, about_person, description, created_at FROM interactions ORDER BY created_at DESC`;
+    const { rows: gees } = await sql`SELECT voter_name, content, created_at FROM gees ORDER BY created_at DESC`;
 
     return NextResponse.json(
-      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, totalVotesCount: rawVotes.length },
+      { voters, votesByCategory, totalByNominee, voterBreakdown, voteCountPerVoter, interactions, gees, totalVotesCount: rawVotes.length },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
     );
   } catch (error) {

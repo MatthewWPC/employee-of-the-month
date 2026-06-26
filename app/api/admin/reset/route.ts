@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     const { rows: [votesRow] }        = await sql`SELECT COUNT(*) AS count FROM votes`;
     const { rows: [votersRow] }       = await sql`SELECT COUNT(*) AS count FROM voters`;
     const { rows: [interactionsRow] } = await sql`SELECT COUNT(*) AS count FROM interactions`;
+    const { rows: [geesRow] }         = await sql`SELECT COUNT(*) AS count FROM gees`;
 
     // Archive rows — explicit column lists matching the live table schema.
     // If any INSERT fails, the catch block returns a 500 and the TRUNCATE never runs.
@@ -47,9 +48,13 @@ export async function POST(request: NextRequest) {
       INSERT INTO interactions_archive (id, voter_name, about_person, description, created_at, archive_label)
       SELECT id, voter_name, about_person, description, created_at, ${label} FROM interactions
     `;
+    await sql`
+      INSERT INTO gees_archive (id, voter_name, content, created_at, archive_label)
+      SELECT id, voter_name, content, created_at, ${label} FROM gees
+    `;
 
     // All archives succeeded — safe to clear the live tables
-    await sql`TRUNCATE votes, voters, interactions RESTART IDENTITY`;
+    await sql`TRUNCATE votes, voters, interactions, gees RESTART IDENTITY`;
 
     return NextResponse.json({
       success: true,
@@ -58,6 +63,7 @@ export async function POST(request: NextRequest) {
         votes:        Number(votesRow.count),
         voters:       Number(votersRow.count),
         interactions: Number(interactionsRow.count),
+        gees:         Number(geesRow.count),
       },
     });
   } catch (error) {

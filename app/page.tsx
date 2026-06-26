@@ -108,6 +108,11 @@ export default function HomePage() {
       return;
     }
 
+    if (!admired) {
+      setError('Please admire the Wall of Fame below before you can vote.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -211,7 +216,11 @@ export default function HomePage() {
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setError(''); }}
-              onKeyDown={(e) => e.key === 'Enter' && handleBeginVoting()}
+              onKeyDown={(e) => {
+                // Enter is not a valid way in for voters. They must admire the Wall of Fame first.
+                // Kept only as a quick path to the admin dashboard.
+                if (e.key === 'Enter' && name.trim().toLowerCase() === 'admin') handleBeginVoting();
+              }}
               placeholder="e.g. Jane Doe"
               className="w-full text-white rounded-xl px-4 py-3.5 text-base focus:outline-none transition-all mb-5"
               style={{

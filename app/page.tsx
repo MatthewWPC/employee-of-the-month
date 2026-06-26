@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QUARTERS, type Quarter } from '@/lib/winners';
 
@@ -81,20 +81,7 @@ export default function HomePage() {
   const [admired, setAdmired] = useState(false);
   const router = useRouter();
 
-  const nameInputRef  = useRef<HTMLInputElement>(null);
-  const wallSectionRef = useRef<HTMLElement>(null);
-
-  // Auto-admire once the Wall of Fame section has scrolled into view (≥50% visible)
-  useEffect(() => {
-    const section = wallSectionRef.current;
-    if (!section) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setAdmired(true); },
-      { threshold: 0.5 }
-    );
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, []);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleBeginVoting = async () => {
     const trimmedName = name.trim();
@@ -317,7 +304,6 @@ export default function HomePage() {
 
       {/* ── Wall of Fame ─────────────────────────────────────────────────── */}
       <section
-        ref={wallSectionRef}
         className="py-16 px-4"
         style={{
           background: '#0A1928',

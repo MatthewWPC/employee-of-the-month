@@ -23,3 +23,11 @@ export function isAuthorized(request: NextRequest): boolean {
     return false;
   }
 }
+
+// The single team member permitted to re-enter and edit a submission after voting.
+// Everyone else is locked once they have voted (honor-system, name-based).
+export const VOTE_EDITOR = 'Matthew Norris';
+
+export function isVoteEditor(name: string | null | undefined): boolean {
+  return typeof name === 'string' && name.trim().toLowerCase() === VOTE_EDITOR.toLowerCase();
+}

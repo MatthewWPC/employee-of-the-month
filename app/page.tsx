@@ -127,6 +127,12 @@ export default function HomePage() {
       }
 
       sessionStorage.setItem('voterName', trimmedName);
+      // Matthew Norris is allowed back in to edit; flag it so the vote form pre-fills.
+      if (data.isEditor) {
+        sessionStorage.setItem('editMode', '1');
+      } else {
+        sessionStorage.removeItem('editMode');
+      }
       router.push('/vote');
     } catch {
       setError('Something went wrong. Please try again.');

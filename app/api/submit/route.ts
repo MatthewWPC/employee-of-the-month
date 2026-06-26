@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
+import { isVoteEditor } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   noStore();
@@ -17,7 +18,14 @@ export async function POST(request: NextRequest) {
     const name = voterName.trim();
     const { rows: existing } = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name})`;
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'already_voted' }, { status: 409 });
+      if (!isVoteEditor(name)) {
+        return NextResponse.json({ error: 'already_voted' }, { status: 409 });
+      }
+      // Vote editor is re-submitting: clear the previous submission so this one replaces it.
+      await sql`DELETE FROM votes        WHERE LOWER(voter_name) = LOWER(${name})`;
+      await sql`DELETE FROM interactions WHERE LOWER(voter_name) = LOWER(${name})`;
+      await sql`DELETE FROM gees         WHERE LOWER(voter_name) = LOWER(${name})`;
+      await sql`DELETE FROM voters       WHERE LOWER(name)       = LOWER(${name})`;
     }
 
     await sql`INSERT INTO voters (name) VALUES (${name})`;

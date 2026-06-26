@@ -135,12 +135,34 @@ export default function VotePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const name = sessionStorage.getItem('voterName');
     if (!name) { router.replace('/'); return; }
     setVoterName(name);
+
+    // Edit mode: Matthew Norris re-entering. Pre-fill the form with his current submission.
+    if (sessionStorage.getItem('editMode') === '1') {
+      setEditing(true);
+      fetch(`/api/my-votes?name=${encodeURIComponent(name)}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (!data || data.error) return;
+          if (data.votes && typeof data.votes === 'object') setVotes(data.votes);
+          if (data.interaction) {
+            setInteraction({
+              aboutPerson: data.interaction.aboutPerson ?? '',
+              description: data.interaction.description ?? '',
+            });
+          }
+          if (typeof data.gees === 'string') setGees(data.gees);
+          if (typeof data.geesFined === 'string') setGeesFined(data.geesFined);
+          if (data.geesImage) setGeesImage(data.geesImage);
+        })
+        .catch(() => {});
+    }
   }, [router]);
 
   const toggleVote = useCallback((categoryId: string, nominee: string) => {
@@ -211,6 +233,7 @@ export default function VotePage() {
       setTimeout(() => fire(0.1,  { spread: 120, startVelocity: 45, colors: ['#FD6F2F', '#0F2540'] }), 700);
 
       sessionStorage.removeItem('voterName');
+      sessionStorage.removeItem('editMode');
       setSubmitted(true);
     } catch {
       alert('Something went wrong. Please try again.');
@@ -227,7 +250,7 @@ export default function VotePage() {
         <div className="text-center max-w-lg animate-scale-in">
           <img src="/logo-transparent.png" alt="WealthPoint Capital" style={{ height: '60px', width: 'auto', maxWidth: '220px', display: 'block', margin: '0 auto 2rem', filter: 'brightness(1.15)' }} />
           <div className="text-8xl mb-6">🏆</div>
-          <h1 className="text-4xl font-bold text-white mb-4">Votes Cast!</h1>
+          <h1 className="text-4xl font-bold text-white mb-4">{editing ? 'Votes Updated!' : 'Votes Cast!'}</h1>
           <p className="text-lg mb-3" style={{ color: 'rgba(255,255,255,0.7)' }}>
             Thank you, <strong className="text-white">{voterName}</strong>.
           </p>
@@ -284,9 +307,15 @@ export default function VotePage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Page heading */}
         <div className="mb-8 animate-fade-in-up">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Cast your votes</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            {editing ? 'Edit your votes' : 'Cast your votes'}
+          </h1>
           <p style={{ color: 'rgba(255,255,255,0.55)' }}>
-            Welcome, <strong className="text-white">{voterName}</strong>. Select up to 2 nominees per category.
+            {editing ? (
+              <>Welcome back, <strong className="text-white">{voterName}</strong>. Your current picks are loaded below. Change anything and resubmit to update.</>
+            ) : (
+              <>Welcome, <strong className="text-white">{voterName}</strong>. Select up to 2 nominees per category.</>
+            )}
           </p>
         </div>
 
@@ -556,10 +585,12 @@ export default function VotePage() {
                   e.currentTarget.style.boxShadow = submitting ? 'none' : '0 12px 36px rgba(253,111,47,0.35)';
                 }}
               >
-                {submitting ? 'Submitting your votes…' : '✦  Submit My Votes  ✦'}
+                {submitting
+                  ? (editing ? 'Updating your votes…' : 'Submitting your votes…')
+                  : (editing ? '✦  Update My Votes  ✦' : '✦  Submit My Votes  ✦')}
               </button>
               <p className="text-center text-xs mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                Once submitted, your votes cannot be changed.
+                {editing ? 'You can come back and edit your votes again anytime.' : 'Once submitted, your votes cannot be changed.'}
               </p>
             </div>
           </div>

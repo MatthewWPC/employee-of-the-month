@@ -66,8 +66,7 @@ function MemberAvatar({ name, size = 48, selected }: { name: string; size?: numb
         alt={name}
         onError={() => setImgError(true)}
         style={{
-          width: '118%', height: '118%',
-          marginLeft: '-9%', marginTop: '-9%',
+          width: '100%', height: '100%',
           objectFit: 'cover',
           objectPosition: 'center center',
           display: 'block',

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
-import { isVoteEditor } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +12,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const name = (searchParams.get('name') ?? '').trim();
 
-    if (!isVoteEditor(name)) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    if (!name) {
+      return NextResponse.json({ error: 'missing name' }, { status: 400 });
     }
 
     await initializeSchema();

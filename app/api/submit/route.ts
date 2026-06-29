@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { sql, initializeSchema } from '@/lib/db';
-import { isVoteEditor } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   noStore();
@@ -16,12 +15,17 @@ export async function POST(request: NextRequest) {
     await initializeSchema();
 
     const name = voterName.trim();
+
+    // Server-side safety net: a complete ballot is 2 picks in each of the 10 categories (20 total).
+    const totalNominees = Object.values((votes ?? {}) as Record<string, string[]>)
+      .reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+    if (totalNominees < 20) {
+      return NextResponse.json({ error: 'incomplete' }, { status: 400 });
+    }
+
     const { rows: existing } = await sql`SELECT id FROM voters WHERE LOWER(name) = LOWER(${name})`;
     if (existing.length > 0) {
-      if (!isVoteEditor(name)) {
-        return NextResponse.json({ error: 'already_voted' }, { status: 409 });
-      }
-      // Vote editor is re-submitting: clear the previous submission so this one replaces it.
+      // Anyone may log back in and resubmit. Clear their previous submission so this one replaces it.
       await sql`DELETE FROM votes        WHERE LOWER(voter_name) = LOWER(${name})`;
       await sql`DELETE FROM interactions WHERE LOWER(voter_name) = LOWER(${name})`;
       await sql`DELETE FROM gees         WHERE LOWER(voter_name) = LOWER(${name})`;

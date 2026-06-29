@@ -174,9 +174,13 @@ export default function VotePage() {
     });
   }, []);
 
-  const progress = Math.round(
-    (Object.values(votes).filter(v => v.length > 0).length / CATEGORIES.length) * 100
-  );
+  const REQUIRED_PER_CATEGORY = 2;
+  const REQUIRED_PICKS = CATEGORIES.length * REQUIRED_PER_CATEGORY; // 10 categories x 2 = 20
+  const totalPicks = Object.values(votes).reduce((sum, arr) => sum + arr.length, 0);
+  const completeCategories = CATEGORIES.filter(c => (votes[c.id]?.length ?? 0) === REQUIRED_PER_CATEGORY).length;
+  const incompleteCategories = CATEGORIES.filter(c => (votes[c.id]?.length ?? 0) !== REQUIRED_PER_CATEGORY);
+  const allComplete = completeCategories === CATEGORIES.length;
+  const progress = Math.round((totalPicks / REQUIRED_PICKS) * 100);
 
   const nominationTally = TEAM_MEMBERS.reduce<Record<string, number>>((acc, member) => {
     const count = Object.values(votes).flat().filter(n => n === member).length;
@@ -202,6 +206,10 @@ export default function VotePage() {
   };
 
   const handleSubmit = async () => {
+    if (!allComplete) {
+      alert('Please pick exactly 2 people in every category. You need 20 votes in total before you can submit.');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/submit', {
@@ -314,7 +322,7 @@ export default function VotePage() {
             {editing ? (
               <>Welcome back, <strong className="text-white">{voterName}</strong>. Your current picks are loaded below. Change anything and resubmit to update.</>
             ) : (
-              <>Welcome, <strong className="text-white">{voterName}</strong>. Select up to 2 nominees per category.</>
+              <>Welcome, <strong className="text-white">{voterName}</strong>. Pick exactly 2 nominees in every category. You need all 20 before you can submit.</>
             )}
           </p>
         </div>
@@ -564,33 +572,49 @@ export default function VotePage() {
 
             {/* Submit */}
             <div className="pb-10 animate-fade-in-up" style={{ animationDelay: `${(CATEGORIES.length + 2) * 0.04}s` }}>
+              {!allComplete && (
+                <div
+                  className="mb-4 rounded-xl px-4 py-3"
+                  style={{ background: 'rgba(253,111,47,0.08)', border: '1px solid rgba(253,111,47,0.3)' }}
+                >
+                  <p className="text-sm font-semibold mb-1" style={{ color: '#FD6F2F' }}>
+                    Almost there: {totalPicks}/{REQUIRED_PICKS} votes
+                  </p>
+                  <p className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    You still need 2 picks in: {incompleteCategories.map(c => c.name).join(', ')}
+                  </p>
+                </div>
+              )}
               <button
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || !allComplete}
                 className="w-full py-5 rounded-2xl font-bold text-lg tracking-wide text-white transition-all duration-200"
                 style={{
-                  background: submitting ? 'rgba(253,111,47,0.4)' : '#FD6F2F',
-                  boxShadow: submitting ? 'none' : '0 12px 36px rgba(253,111,47,0.35)',
+                  background: (submitting || !allComplete) ? 'rgba(253,111,47,0.4)' : '#FD6F2F',
+                  boxShadow: (submitting || !allComplete) ? 'none' : '0 12px 36px rgba(253,111,47,0.35)',
+                  cursor: (submitting || !allComplete) ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  if (!submitting) {
+                  if (!submitting && allComplete) {
                     e.currentTarget.style.background = '#ff8c52';
                     e.currentTarget.style.transform = 'scale(1.01)';
                     e.currentTarget.style.boxShadow = '0 16px 44px rgba(253,111,47,0.45)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = submitting ? 'rgba(253,111,47,0.4)' : '#FD6F2F';
+                  e.currentTarget.style.background = (submitting || !allComplete) ? 'rgba(253,111,47,0.4)' : '#FD6F2F';
                   e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = submitting ? 'none' : '0 12px 36px rgba(253,111,47,0.35)';
+                  e.currentTarget.style.boxShadow = (submitting || !allComplete) ? 'none' : '0 12px 36px rgba(253,111,47,0.35)';
                 }}
               >
                 {submitting
-                  ? (editing ? 'Updating your votes…' : 'Submitting your votes…')
-                  : (editing ? '✦  Update My Votes  ✦' : '✦  Submit My Votes  ✦')}
+                  ? (editing ? 'Updating your votes...' : 'Submitting your votes...')
+                  : !allComplete
+                    ? `Pick 2 in every category (${totalPicks}/${REQUIRED_PICKS})`
+                    : (editing ? '✦  Update My Votes  ✦' : '✦  Submit My Votes  ✦')}
               </button>
               <p className="text-center text-xs mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                {editing ? 'You can come back and edit your votes again anytime.' : 'Once submitted, your votes cannot be changed.'}
+                Pick exactly 2 people in all {CATEGORIES.length} categories (20 votes total) to submit. You can log back in and change your picks anytime.
               </p>
             </div>
           </div>
@@ -640,9 +664,9 @@ export default function VotePage() {
 
                 <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(204,204,204,0.1)' }}>
                   <div className="flex justify-between text-xs mb-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    <span>Categories voted</span>
+                    <span>Categories complete</span>
                     <span className="font-semibold text-white">
-                      {Object.values(votes).filter(v => v.length > 0).length}/{CATEGORIES.length}
+                      {completeCategories}/{CATEGORIES.length}
                     </span>
                   </div>
                   <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>

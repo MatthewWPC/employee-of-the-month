@@ -107,15 +107,9 @@ export default function HomePage() {
       const res = await fetch(`/api/check-voter?name=${encodeURIComponent(trimmedName)}`);
       const data = await res.json();
 
-      if (data.hasVoted) {
-        setError("It looks like you've already cast your votes. Each person can only vote once — thank you for participating!");
-        setLoading(false);
-        return;
-      }
-
       sessionStorage.setItem('voterName', trimmedName);
-      // Matthew Norris is allowed back in to edit; flag it so the vote form pre-fills.
-      if (data.isEditor) {
+      // Anyone can log back in. If they already have a submission, pre-fill it so they can add to or change it.
+      if (data.hasExisting) {
         sessionStorage.setItem('editMode', '1');
       } else {
         sessionStorage.removeItem('editMode');

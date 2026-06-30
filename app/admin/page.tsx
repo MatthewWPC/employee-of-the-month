@@ -80,6 +80,7 @@ export default function AdminPage() {
   // ── Dashboard ─────────────────────────────────────────────────────────────
   const [data, setData]                     = useState<AdminData | null>(null);
   const [loading, setLoading]               = useState(true);
+  const [generating, setGenerating]         = useState(false);
   const [activeTab, setActiveTab]           = useState<'overview' | 'categories' | 'interactions' | 'voters' | 'history'>('overview');
   const [expandedVoter, setExpandedVoter]   = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete]   = useState<string | null>(null);
@@ -277,6 +278,361 @@ export default function AdminPage() {
       .catch(() => setArchiveDetailLoading(false));
   };
 
+  // ── PPTX export ──────────────────────────────────────────────────────────
+  const handleDownloadPptx = async () => {
+    if (!data) return;
+    setGenerating(true);
+    try {
+      const PptxGenJS = (await import('pptxgenjs')).default;
+      const pptx = new PptxGenJS();
+
+      const NAVY  = '0F2540';
+      const CARD  = '122E4C';
+      const ORANGE = 'FD6F2F';
+      const WHITE  = 'FFFFFF';
+      const DIM    = 'A0B4C8';
+      const STEEL  = '2E86AB';
+      const DARK_BLUE = '1A3A5C';
+      const W = 10;
+      const H = 5.625;
+
+      type Slide = ReturnType<typeof pptx.addSlide>;
+
+      const toBase64 = async (url: string): Promise<string | null> => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror   = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        } catch { return null; }
+      };
+
+      const memberPhoto: Record<string, string> = {
+        'Steve Staplyton Smith': '/team/steve.png',
+        'Adam Turk':             '/team/adam.png',
+        'Jan Faure':             '/team/jan.png',
+        'Matthew Norris':        '/team/matthew.png',
+        'James Booth':           '/team/james-booth.png',
+        'James Poole':           '/team/james-poole.png',
+        'Kira Williams':         '/team/kira.png',
+        'Candice Boshoff':       '/team/candice.png',
+      };
+
+      const logoB64 = await toBase64('/logo-transparent.png');
+      const photoCache: Record<string, string | null> = {};
+      for (const [name, path] of Object.entries(memberPhoto)) {
+        photoCache[name] = await toBase64(path);
+      }
+      const geeImgCache: (string | null)[] = [];
+      for (const g of data.gees) {
+        geeImgCache.push(g.image ? await toBase64(g.image) : null);
+      }
+
+      const now2 = new Date();
+      const q2   = Math.ceil((now2.getMonth() + 1) / 3);
+      const ql   = currentQuarterLabel();
+      const fileName = `WPC-EOTQ-Q${q2}-${now2.getFullYear()}.pptx`;
+
+      pptx.layout  = 'LAYOUT_WIDE';
+      pptx.author  = 'WealthPoint Capital';
+      pptx.title   = `Employee of the Quarter - ${ql}`;
+
+      const addBg = (s: Slide) => {
+        s.addShape('rect', { x: 0, y: 0, w: W, h: H, fill: { color: NAVY }, line: { color: NAVY } });
+      };
+
+      const addTopBar = (s: Slide, title: string) => {
+        s.addShape('rect', { x: 0, y: 0,    w: W, h: 0.6,  fill: { color: CARD },   line: { color: CARD } });
+        s.addShape('rect', { x: 0, y: 0.6,  w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addText(title, { x: 0.4, y: 0.1, w: W - 0.8, h: 0.45, fontSize: 18, bold: true, color: WHITE, fontFace: 'Calibri' });
+      };
+
+      const addQLabel = (s: Slide) => {
+        s.addText(ql, { x: W - 2.5, y: 0.1, w: 2.1, h: 0.4, fontSize: 13, color: ORANGE, align: 'right', fontFace: 'Calibri' });
+      };
+
+      // ── Title slide ───────────────────────────────────────────────────────
+      {
+        const s = pptx.addSlide();
+        addBg(s);
+        s.addShape('rect', { x: 0, y: 1.7,  w: W, h: 2.25, fill: { color: CARD },   line: { color: CARD } });
+        s.addShape('rect', { x: 0, y: 1.7,  w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addShape('rect', { x: 0, y: 3.91, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        if (logoB64) {
+          s.addImage({ data: logoB64, x: 3.9, y: 0.5, w: 2.2, h: 0.88 });
+        } else {
+          s.addText('WealthPoint Capital', { x: 1, y: 0.5, w: 8, h: 0.88, fontSize: 20, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+        }
+        s.addText('EMPLOYEE OF THE QUARTER', { x: 0.5, y: 1.85, w: W - 1, h: 0.85, fontSize: 34, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+        s.addText(ql, { x: 0.5, y: 2.75, w: W - 1, h: 0.65, fontSize: 28, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+        s.addText('WealthPoint Capital', { x: 0.5, y: 4.9, w: W - 1, h: 0.35, fontSize: 11, color: DIM, align: 'center', fontFace: 'Calibri' });
+      }
+
+      // ── Summary stats ─────────────────────────────────────────────────────
+      {
+        const s = pptx.addSlide();
+        addBg(s);
+        addTopBar(s, 'By the Numbers');
+        addQLabel(s);
+        const stats = [
+          { label: 'Voters',                value: String(data.voters.length) },
+          { label: 'Total Votes Cast',      value: String(data.totalVotesCount) },
+          { label: 'Memorable Interactions', value: String(data.interactions.length) },
+          { label: "Fines (G's)",           value: String(data.gees.length) },
+        ];
+        const cw = 2.1, ch = 1.6, cy = 1.8, gap = 0.3;
+        const startX = (W - (stats.length * cw + (stats.length - 1) * gap)) / 2;
+        stats.forEach((st, i) => {
+          const cx = startX + i * (cw + gap);
+          s.addShape('rect', { x: cx, y: cy, w: cw, h: ch, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
+          s.addText(st.value, { x: cx, y: cy + 0.2,  w: cw, h: 0.8,  fontSize: 38, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          s.addText(st.label, { x: cx, y: cy + 1.08, w: cw, h: 0.42, fontSize: 12, color: DIM,   align: 'center', fontFace: 'Calibri' });
+        });
+      }
+
+      // ── Overall leaderboard ───────────────────────────────────────────────
+      {
+        const s = pptx.addSlide();
+        addBg(s);
+        addTopBar(s, 'Overall Standings');
+        addQLabel(s);
+        const sorted = Object.entries(data.totalByNominee).sort((a, b) => b[1] - a[1]).slice(0, 8);
+        const maxV   = sorted[0]?.[1] ?? 1;
+        const topName  = sorted[0]?.[0];
+        const topPhoto = topName ? photoCache[topName] : null;
+        const hasPhoto = !!topPhoto;
+        const tableX = hasPhoto ? 0.4 : 1.5;
+        const tableW = hasPhoto ? 6.5 : 7;
+        sorted.forEach(([name, count], i) => {
+          const rowY = 0.85 + i * 0.54;
+          const bw = (count / maxV) * (tableW - 2.5);
+          s.addShape('rect', { x: tableX + 1.8, y: rowY + 0.09, w: tableW - 2.5, h: 0.34, fill: { color: DARK_BLUE }, line: { color: DARK_BLUE } });
+          s.addShape('rect', { x: tableX + 1.8, y: rowY + 0.09, w: Math.max(bw, 0.05), h: 0.34, fill: { color: i === 0 ? ORANGE : STEEL }, line: { color: i === 0 ? ORANGE : STEEL } });
+          s.addText(`${i + 1}.`, { x: tableX,       y: rowY, w: 0.4,              h: 0.52, fontSize: 13, bold: i === 0, color: i === 0 ? ORANGE : DIM,   fontFace: 'Calibri' });
+          s.addText(name,         { x: tableX + 0.45, y: rowY, w: 1.3,              h: 0.52, fontSize: 12, bold: i === 0, color: WHITE,                     fontFace: 'Calibri' });
+          s.addText(String(count),{ x: tableX + tableW - 0.55, y: rowY, w: 0.5, h: 0.52, fontSize: 12, bold: i === 0, color: i === 0 ? ORANGE : DIM, align: 'right', fontFace: 'Calibri' });
+        });
+        if (hasPhoto) {
+          s.addImage({ data: topPhoto!, x: 7.3, y: 0.85, w: 2.3, h: 2.3 });
+          s.addShape('rect', { x: 7.3, y: 3.2, w: 2.3, h: 0.45, fill: { color: ORANGE }, line: { color: ORANGE } });
+          s.addText('#1  ' + topName, { x: 7.3, y: 3.2, w: 2.3, h: 0.45, fontSize: 12, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+        }
+      }
+
+      // ── Category winners overview ──────────────────────────────────────────
+      {
+        const s = pptx.addSlide();
+        addBg(s);
+        addTopBar(s, 'Category Winners');
+        addQLabel(s);
+        const rows = CATEGORIES_ORDER.map(cat => {
+          const catVotes = data.votesByCategory[cat] ?? {};
+          const winner = Object.entries(catVotes).sort((a, b) => b[1] - a[1])[0];
+          return { cat: CATEGORY_DISPLAY[cat], winner: winner ? winner[0] : 'No votes', votes: winner ? winner[1] : 0 };
+        });
+        const half  = Math.ceil(rows.length / 2);
+        const colW  = 4.6;
+        const rh    = 0.46;
+        const startY = 0.85;
+        rows.forEach((row, i) => {
+          const col = i < half ? 0 : 1;
+          const ri  = i < half ? i : i - half;
+          const cx  = col === 0 ? 0.35 : 5.2;
+          const cy  = startY + ri * (rh + 0.06);
+          s.addShape('rect', { x: cx, y: cy, w: colW, h: rh, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
+          s.addText(row.cat, { x: cx + 0.1, y: cy, w: 2.4, h: rh, fontSize: 9.5, color: DIM,   valign: 'middle', fontFace: 'Calibri' });
+          s.addText(row.winner, { x: cx + 2.55, y: cy, w: colW - 2.65, h: rh, fontSize: 11, bold: true, color: WHITE, valign: 'middle', fontFace: 'Calibri' });
+        });
+      }
+
+      // ── Per-category slides ────────────────────────────────────────────────
+      for (const cat of CATEGORIES_ORDER) {
+        const s = pptx.addSlide();
+        addBg(s);
+        const displayName = CATEGORY_DISPLAY[cat];
+        const catVotes = data.votesByCategory[cat] ?? {};
+        const sorted   = Object.entries(catVotes).sort((a, b) => b[1] - a[1]);
+        const winner   = sorted[0];
+        const maxV     = winner?.[1] ?? 1;
+        const winnerPhoto = winner ? photoCache[winner[0]] : null;
+
+        s.addShape('rect', { x: 0, y: 0, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addText(displayName, { x: 0.4, y: 0.12, w: 7, h: 0.75, fontSize: 28, bold: true, color: WHITE, fontFace: 'Calibri' });
+        s.addText(ql, { x: 7.5, y: 0.12, w: 2.1, h: 0.55, fontSize: 13, color: ORANGE, align: 'right', fontFace: 'Calibri' });
+
+        if (sorted.length === 0) {
+          s.addText('No votes recorded', { x: 0.4, y: 2.5, w: W - 0.8, h: 0.6, fontSize: 18, color: DIM, align: 'center', fontFace: 'Calibri' });
+        } else {
+          if (winner) {
+            s.addShape('rect', { x: 0.35, y: 1.05, w: 5.8, h: 0.68, fill: { color: ORANGE }, line: { color: ORANGE } });
+            s.addText('WINNER: ' + winner[0], { x: 0.35, y: 1.05, w: 5.8, h: 0.68, fontSize: 18, bold: true, color: WHITE, valign: 'middle', fontFace: 'Calibri' });
+          }
+          sorted.forEach(([name, count], i) => {
+            const by = 1.9 + i * 0.44;
+            if (by > H - 0.25) return;
+            const bw = (count / maxV) * 3.7;
+            s.addShape('rect', { x: 1.85, y: by, w: 3.7, h: 0.34, fill: { color: DARK_BLUE }, line: { color: DARK_BLUE } });
+            s.addShape('rect', { x: 1.85, y: by, w: Math.max(bw, 0.05), h: 0.34, fill: { color: i === 0 ? ORANGE : STEEL }, line: { color: i === 0 ? ORANGE : STEEL } });
+            s.addText(name,         { x: 0.35, y: by, w: 1.45, h: 0.34, fontSize: 10, color: i === 0 ? WHITE : DIM, valign: 'middle', fontFace: 'Calibri' });
+            s.addText(String(count),{ x: 5.6,  y: by, w: 0.5,  h: 0.34, fontSize: 10, color: i === 0 ? ORANGE : DIM, align: 'right', valign: 'middle', fontFace: 'Calibri' });
+          });
+          if (winnerPhoto) {
+            s.addImage({ data: winnerPhoto, x: 7.0, y: 0.85, w: 2.65, h: 2.65 });
+            s.addShape('rect', { x: 7.0, y: 3.55, w: 2.65, h: 0.42, fill: { color: ORANGE }, line: { color: ORANGE } });
+            s.addText(winner[0], { x: 7.0, y: 3.55, w: 2.65, h: 0.42, fontSize: 11, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
+          }
+        }
+      }
+
+      // ── Memorable interactions ─────────────────────────────────────────────
+      if (data.interactions.length > 0) {
+        const perPage = 5;
+        for (let ci = 0; ci < data.interactions.length; ci += perPage) {
+          const chunk = data.interactions.slice(ci, ci + perPage);
+          const totalPages = Math.ceil(data.interactions.length / perPage);
+          const s = pptx.addSlide();
+          addBg(s);
+          addTopBar(s, totalPages > 1 ? `Memorable Interactions (${Math.floor(ci / perPage) + 1}/${totalPages})` : 'Memorable Interactions');
+          addQLabel(s);
+          chunk.forEach((item, i) => {
+            const iy = 0.85 + i * 0.9;
+            s.addShape('rect', { x: 0.35, y: iy, w: W - 0.7, h: 0.82, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
+            s.addText(`${item.voter_name} about ${item.about_person}`, { x: 0.5, y: iy + 0.05, w: W - 1, h: 0.28, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
+            s.addText(item.description.slice(0, 180), { x: 0.5, y: iy + 0.36, w: W - 1, h: 0.4, fontSize: 10, color: WHITE, fontFace: 'Calibri' });
+          });
+        }
+      }
+
+      // ── Fines ─────────────────────────────────────────────────────────────
+      if (data.gees.length > 0) {
+        const perPage = 4;
+        let geeOffset = 0;
+        for (let ci = 0; ci < data.gees.length; ci += perPage) {
+          const chunk = data.gees.slice(ci, ci + perPage);
+          const totalPages = Math.ceil(data.gees.length / perPage);
+          const s = pptx.addSlide();
+          addBg(s);
+          addTopBar(s, totalPages > 1 ? `Fines (${Math.floor(ci / perPage) + 1}/${totalPages})` : "Fines (G's)");
+          addQLabel(s);
+          chunk.forEach((g, i) => {
+            const imgB64  = geeImgCache[geeOffset + i];
+            const hasImg  = !!imgB64;
+            const iy      = 0.85 + i * 1.12;
+            const cardH   = 1.02;
+            s.addShape('rect', { x: 0.35, y: iy, w: W - 0.7, h: cardH, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
+            const headerText = g.fined_person ? `${g.voter_name} fined ${g.fined_person}` : g.voter_name;
+            s.addText(headerText, { x: 0.5, y: iy + 0.06, w: hasImg ? W - 2.8 : W - 1, h: 0.28, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
+            s.addText(g.content.slice(0, 200), { x: 0.5, y: iy + 0.37, w: hasImg ? W - 2.8 : W - 1, h: 0.56, fontSize: 10, color: WHITE, fontFace: 'Calibri' });
+            if (hasImg) {
+              s.addImage({ data: imgB64!, x: W - 2.05, y: iy + 0.07, w: 1.55, h: 0.86 });
+            }
+          });
+          geeOffset += chunk.length;
+        }
+      }
+
+      // ── Voter ballots ──────────────────────────────────────────────────────
+      {
+        const voters     = data.voters.map(v => v.name);
+        const perPage    = 4;
+        for (let ci = 0; ci < voters.length; ci += perPage) {
+          const chunk      = voters.slice(ci, ci + perPage);
+          const totalPages = Math.ceil(voters.length / perPage);
+          const s = pptx.addSlide();
+          addBg(s);
+          addTopBar(s, totalPages > 1 ? `Voter Ballots (${Math.floor(ci / perPage) + 1}/${totalPages})` : 'Voter Ballots');
+          addQLabel(s);
+          const colW = (W - 0.7) / chunk.length;
+          chunk.forEach((voter, vi) => {
+            const cx = 0.35 + vi * colW;
+            s.addShape('rect', { x: cx, y: 0.85, w: colW - 0.15, h: 0.38, fill: { color: ORANGE }, line: { color: ORANGE } });
+            s.addText(voter, { x: cx, y: 0.85, w: colW - 0.15, h: 0.38, fontSize: 11, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
+            const picks = data.voterBreakdown[voter] ?? {};
+            let ry = 1.3;
+            CATEGORIES_ORDER.forEach(cat => {
+              const nominees = picks[cat] ?? [];
+              if (nominees.length === 0) return;
+              if (ry > H - 0.2) return;
+              s.addText(CATEGORY_DISPLAY[cat].replace('THE ', ''), { x: cx, y: ry, w: colW - 0.15, h: 0.22, fontSize: 7.5, color: DIM, fontFace: 'Calibri' });
+              ry += 0.22;
+              nominees.forEach(n => {
+                if (ry > H - 0.15) return;
+                s.addText(n, { x: cx + 0.05, y: ry, w: colW - 0.2, h: 0.2, fontSize: 8.5, bold: true, color: WHITE, fontFace: 'Calibri' });
+                ry += 0.2;
+              });
+            });
+          });
+        }
+      }
+
+      // ── Suspense slide ────────────────────────────────────────────────────
+      {
+        const s = pptx.addSlide();
+        addBg(s);
+        s.addShape('rect', { x: 0, y: 2.05, w: W, h: 1.5,  fill: { color: CARD },   line: { color: CARD } });
+        s.addShape('rect', { x: 0, y: 2.05, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addShape('rect', { x: 0, y: 3.51, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addText('AND THE WINNER IS...', { x: 0.5, y: 2.1, w: W - 1, h: 1.4, fontSize: 40, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
+        if (logoB64) {
+          s.addImage({ data: logoB64, x: (W - 2.2) / 2, y: 4.1, w: 2.2, h: 0.88 });
+        }
+      }
+
+      // ── Winner reveal ─────────────────────────────────────────────────────
+      {
+        const sorted    = Object.entries(data.totalByNominee).sort((a, b) => b[1] - a[1]);
+        const topScore  = sorted[0]?.[1] ?? 0;
+        const winnerNames = sorted.filter(([, c]) => c === topScore).map(([n]) => n);
+        const isTie     = winnerNames.length > 1;
+        const s = pptx.addSlide();
+        addBg(s);
+        s.addShape('rect', { x: 0, y: 0,        w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addShape('rect', { x: 0, y: H - 0.04, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+
+        if (!isTie && winnerNames[0]) {
+          const winner = winnerNames[0];
+          const photo  = photoCache[winner];
+          if (photo) {
+            s.addImage({ data: photo, x: 0.4, y: 0.2, w: 4.2, h: 4.2 });
+          }
+          const tx = photo ? 5.0  : 1.5;
+          const tw = photo ? 4.6  : 7;
+          s.addText('EMPLOYEE OF THE QUARTER', { x: tx, y: 0.4,  w: tw, h: 0.65, fontSize: 16, bold: true, color: DIM,   fontFace: 'Calibri' });
+          s.addText(ql,                         { x: tx, y: 1.05, w: tw, h: 0.55, fontSize: 22, color: ORANGE, fontFace: 'Calibri' });
+          s.addShape('rect', { x: tx, y: 1.7, w: tw, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+          s.addText(winner,                     { x: tx, y: 1.85, w: tw, h: 1.1,  fontSize: 36, bold: true, color: WHITE,  fontFace: 'Calibri' });
+          s.addText(`${topScore} votes`,        { x: tx, y: 3.0,  w: tw, h: 0.55, fontSize: 20, color: ORANGE, fontFace: 'Calibri' });
+          s.addText('Congratulations!',         { x: tx, y: 3.65, w: tw, h: 0.6,  fontSize: 18, color: DIM,   fontFace: 'Calibri' });
+          if (logoB64) {
+            s.addImage({ data: logoB64, x: tx, y: 4.3, w: 1.8, h: 0.72 });
+          }
+        } else {
+          s.addText("IT'S A TIE!", { x: 0.5, y: 0.6, w: W - 1, h: 0.9, fontSize: 44, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          s.addText(`${ql} - Joint Winners`, { x: 0.5, y: 1.55, w: W - 1, h: 0.55, fontSize: 20, color: DIM, align: 'center', fontFace: 'Calibri' });
+          const spacing = (W - 0.8) / winnerNames.length;
+          winnerNames.forEach((winner, i) => {
+            const cx    = 0.4 + i * spacing;
+            const photo = photoCache[winner];
+            if (photo) {
+              s.addImage({ data: photo, x: cx, y: 2.2, w: Math.min(spacing - 0.2, 2.0), h: Math.min(spacing - 0.2, 2.0) });
+            }
+            s.addText(winner, { x: cx, y: 4.3, w: spacing - 0.1, h: 0.45, fontSize: 13, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+          });
+          s.addText(`${topScore} votes each`, { x: 0.5, y: 4.8, w: W - 1, h: 0.4, fontSize: 14, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+        }
+      }
+
+      await pptx.writeFile({ fileName });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // ── Derived data ──────────────────────────────────────────────────────────
   const leaderboardData = data
     ? Object.entries(data.totalByNominee).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
@@ -371,6 +727,28 @@ export default function AdminPage() {
           <h1 className="text-xl font-bold text-white">Admin Dashboard</h1>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleDownloadPptx}
+            disabled={!data || loading || generating}
+            className="text-sm font-semibold px-4 py-2 rounded-xl transition-all"
+            style={{
+              background: (!data || loading || generating) ? 'rgba(253,111,47,0.12)' : 'rgba(253,111,47,0.18)',
+              color: (!data || loading || generating) ? 'rgba(253,111,47,0.45)' : '#FD6F2F',
+              border: '1px solid rgba(253,111,47,0.35)',
+              cursor: (!data || loading || generating) ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              if (!data || loading || generating) return;
+              e.currentTarget.style.background = 'rgba(253,111,47,0.32)';
+              e.currentTarget.style.borderColor = 'rgba(253,111,47,0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(253,111,47,0.18)';
+              e.currentTarget.style.borderColor = 'rgba(253,111,47,0.35)';
+            }}
+          >
+            {generating ? 'Building...' : 'Download Deck'}
+          </button>
           <button
             onClick={() => setShowReset(true)}
             className="text-sm font-semibold px-4 py-2 rounded-xl transition-all"

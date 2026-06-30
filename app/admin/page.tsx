@@ -516,34 +516,49 @@ export default function AdminPage() {
 
       // ── Slide 14: Fines ────────────────────────────────────────────────────────
       if (data.gees.length > 0) {
-        const perFine = 3;
-        let geeOffset = 0;
-        const totalFinePages = Math.ceil(data.gees.length / perFine);
-        for (let pg = 0; pg < totalFinePages; pg++) {
-          const chunk = data.gees.slice(pg * perFine, (pg + 1) * perFine);
+        const geePairs = data.gees.map((g, i) => ({ g, img: geeImgCache[i] ?? null }));
+        const textOnlyFines = geePairs.filter(p => !p.img);
+        const imageFines    = geePairs.filter(p => !!p.img);
+
+        // (a) Text-only fines - 3 per slide
+        if (textOnlyFines.length > 0) {
+          const perFine = 3;
+          const totalFinePages = Math.ceil(textOnlyFines.length / perFine);
+          for (let pg = 0; pg < totalFinePages; pg++) {
+            const chunk = textOnlyFines.slice(pg * perFine, (pg + 1) * perFine);
+            const s = pptx.addSlide();
+            addBg(s);
+            addHeader(s);
+            addPill(s, 0.6, 1.2, 'FOR THE GEES');
+            s.addText('The Fines', { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
+            s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+            s.addText('Because some moments deserve to be remembered forever.', { x: 0.6, y: 2.62, w: W - 1.2, h: 0.45, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
+            chunk.forEach(({ g }, i) => {
+              const cy2 = 3.25 + i * 1.38;
+              const cH2 = 1.25;
+              s.addShape('rect', { x: 0.6, y: cy2, w: W - 1.2, h: cH2, fill: { color: CARD }, line: { color: CARD } });
+              const headerText = g.fined_person ? `${g.voter_name} fined ${g.fined_person}` : g.voter_name;
+              s.addText(headerText, { x: 0.8, y: cy2 + 0.1, w: W - 1.6, h: 0.3, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
+              s.addText(g.content.slice(0, 240), { x: 0.8, y: cy2 + 0.46, w: W - 1.6, h: 0.7, fontSize: 10.5, color: WHITE, fontFace: 'Calibri' });
+            });
+          }
+        }
+
+        // (b) Image fines - one dedicated slide each
+        imageFines.forEach(({ g, img }) => {
           const s = pptx.addSlide();
           addBg(s);
           addHeader(s);
-          addPill(s, 0.6, 1.2, "FOR THE GEES");
-          s.addText('The Fines', { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
-          s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
-          s.addText('Because some moments deserve to be remembered forever.', { x: 0.6, y: 2.62, w: W - 1.2, h: 0.45, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
-          chunk.forEach((g, i) => {
-            const imgB64  = geeImgCache[geeOffset + i];
-            const hasImg  = !!imgB64;
-            const cy2     = 3.25 + i * 1.38;
-            const cH2     = 1.25;
-            s.addShape('rect', { x: 0.6, y: cy2, w: W - 1.2, h: cH2, fill: { color: CARD }, line: { color: CARD } });
-            const headerText = g.fined_person ? `${g.voter_name} fined ${g.fined_person}` : g.voter_name;
-            const textW = hasImg ? W - 4.2 : W - 1.6;
-            s.addText(headerText, { x: 0.8, y: cy2 + 0.1, w: textW, h: 0.3, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
-            s.addText(g.content.slice(0, 240), { x: 0.8, y: cy2 + 0.46, w: textW, h: 0.7, fontSize: 10.5, color: WHITE, fontFace: 'Calibri' });
-            if (hasImg) {
-              s.addImage({ data: imgB64!, x: W - 2.85, y: cy2 + 0.1, w: 2.05, h: cH2 - 0.2 });
-            }
-          });
-          geeOffset += chunk.length;
-        }
+          addPill(s, 0.6, 1.12, 'FOR THE GEES');
+          s.addText('The Fines', { x: 0.6, y: 1.46, w: W - 1.2, h: 0.44, fontSize: 26, bold: true, color: WHITE, fontFace: 'Calibri' });
+          const headerText = g.fined_person ? `${g.voter_name} fined ${g.fined_person}` : g.voter_name;
+          s.addText(headerText, { x: 0.6, y: 1.94, w: W - 1.2, h: 0.32, fontSize: 14, bold: true, color: ORANGE, fontFace: 'Calibri' });
+          s.addText(g.content.slice(0, 160), { x: 0.6, y: 2.28, w: W - 1.2, h: 0.3, fontSize: 10, color: WHITE, fontFace: 'Calibri' });
+          // Frame then image - contain sizing so the full picture is always visible
+          const boxX = 1.0, boxY = 2.6, boxW = 11.33, boxH = 4.6;
+          s.addShape('rect', { x: boxX - 0.1, y: boxY - 0.08, w: boxW + 0.2, h: boxH + 0.16, fill: { color: CARD }, line: { color: CARD } });
+          s.addImage({ data: img!, x: boxX, y: boxY, w: boxW, h: boxH, sizing: { type: 'contain', w: boxW, h: boxH } });
+        });
       }
 
       // ── Slide 15: By the Numbers ───────────────────────────────────────────────

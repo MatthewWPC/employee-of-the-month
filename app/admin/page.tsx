@@ -293,8 +293,8 @@ export default function AdminPage() {
       const DIM    = 'A0B4C8';
       const STEEL  = '2E86AB';
       const DARK_BLUE = '1A3A5C';
-      const W = 10;
-      const H = 5.625;
+      const W = 13.33;
+      const H = 7.5;
 
       type Slide = ReturnType<typeof pptx.addSlide>;
 
@@ -342,288 +342,314 @@ export default function AdminPage() {
       pptx.author  = 'WealthPoint Capital';
       pptx.title   = `Employee of the Quarter - ${ql}`;
 
+      const CAT_DESC: Record<string, string> = {
+        cornerstone:     'The foundation others build on. Consistent, dependable, and unshakeable - the person the whole team quietly relies on to deliver, without fail, every single time.',
+        pilot:           "Committed to growth - theirs and others'. They invest in becoming sharper, more skilled, and more effective every quarter. Always learning, always improving.",
+        craftsman:       'Takes genuine pride in doing their work exceptionally well. Accuracy, quality, and attention to detail are non-negotiable standards - not a checklist.',
+        energy_giver:    'Walks into a room and raises the temperature. Their attitude is contagious, their encouragement is real, and they make everyone around them better just by being present.',
+        night_watchman:  'When the moment demanded more than the job description, they delivered - quietly, without fanfare, after hours if needed. Whatever it took. No questions asked.',
+        connector:       'Bridges people, ideas, and teams. Builds relationships internally and externally that move the business forward.',
+        clear_head:      'Brought calm, clarity, and good judgment in a moment of pressure, complexity, or ambiguity.',
+        client_champion: 'Went above and beyond to deliver an exceptional client or stakeholder experience. They made people feel heard, valued, and genuinely well looked after.',
+        culture_keeper:  'Actively protects and enriches what makes Wealthpoint special. Lives the values. Sets the tone. Leads by example.',
+        dark_horse:      "The unsung hero. Quietly exceptional, never seeking the spotlight - yet their contribution, dedication and impact are felt by everyone. This one's for the person who deserves far more recognition than they ever ask for.",
+      };
+
       const addBg = (s: Slide) => {
         s.addShape('rect', { x: 0, y: 0, w: W, h: H, fill: { color: NAVY }, line: { color: NAVY } });
       };
 
-      const addTopBar = (s: Slide, title: string) => {
-        s.addShape('rect', { x: 0, y: 0,    w: W, h: 0.6,  fill: { color: CARD },   line: { color: CARD } });
-        s.addShape('rect', { x: 0, y: 0.6,  w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-        s.addText(title, { x: 0.4, y: 0.1, w: W - 0.8, h: 0.45, fontSize: 18, bold: true, color: WHITE, fontFace: 'Calibri' });
-      };
-
-      const addQLabel = (s: Slide) => {
-        s.addText(ql, { x: W - 2.5, y: 0.1, w: 2.1, h: 0.4, fontSize: 13, color: ORANGE, align: 'right', fontFace: 'Calibri' });
-      };
-
-      // ── Title slide ───────────────────────────────────────────────────────
-      {
-        const s = pptx.addSlide();
-        addBg(s);
-        s.addShape('rect', { x: 0, y: 1.7,  w: W, h: 2.25, fill: { color: CARD },   line: { color: CARD } });
-        s.addShape('rect', { x: 0, y: 1.7,  w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-        s.addShape('rect', { x: 0, y: 3.91, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+      const addHeader = (s: Slide) => {
         if (logoB64) {
-          s.addImage({ data: logoB64, x: 3.9, y: 0.5, w: 2.2, h: 0.88 });
+          s.addImage({ data: logoB64, x: 0.5, y: 0.32, w: 1.6, h: 0.52 });
         } else {
-          s.addText('WealthPoint Capital', { x: 1, y: 0.5, w: 8, h: 0.88, fontSize: 20, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+          s.addText('WC', { x: 0.5, y: 0.32, w: 1.6, h: 0.52, fontSize: 14, bold: true, color: WHITE, fontFace: 'Calibri' });
         }
-        s.addText('EMPLOYEE OF THE QUARTER', { x: 0.5, y: 1.85, w: W - 1, h: 0.85, fontSize: 34, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
-        s.addText(ql, { x: 0.5, y: 2.75, w: W - 1, h: 0.65, fontSize: 28, color: ORANGE, align: 'center', fontFace: 'Calibri' });
-        s.addText('WealthPoint Capital', { x: 0.5, y: 4.9, w: W - 1, h: 0.35, fontSize: 11, color: DIM, align: 'center', fontFace: 'Calibri' });
-      }
+        s.addText(`${ql} AWARDS`, { x: W - 3.6, y: 0.32, w: 3.1, h: 0.52, fontSize: 12, color: DIM, align: 'right', fontFace: 'Calibri' });
+        s.addShape('rect', { x: 0, y: 1.0, w: W, h: 0.04, fill: { color: DARK_BLUE }, line: { color: DARK_BLUE } });
+      };
 
-      // ── Summary stats ─────────────────────────────────────────────────────
-      {
-        const s = pptx.addSlide();
-        addBg(s);
-        addTopBar(s, 'By the Numbers');
-        addQLabel(s);
-        const stats = [
-          { label: 'Voters',                value: String(data.voters.length) },
-          { label: 'Total Votes Cast',      value: String(data.totalVotesCount) },
-          { label: 'Memorable Interactions', value: String(data.interactions.length) },
-          { label: "Fines (G's)",           value: String(data.gees.length) },
-        ];
-        const cw = 2.1, ch = 1.6, cy = 1.8, gap = 0.3;
-        const startX = (W - (stats.length * cw + (stats.length - 1) * gap)) / 2;
-        stats.forEach((st, i) => {
-          const cx = startX + i * (cw + gap);
-          s.addShape('rect', { x: cx, y: cy, w: cw, h: ch, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
-          s.addText(st.value, { x: cx, y: cy + 0.2,  w: cw, h: 0.8,  fontSize: 38, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
-          s.addText(st.label, { x: cx, y: cy + 1.08, w: cw, h: 0.42, fontSize: 12, color: DIM,   align: 'center', fontFace: 'Calibri' });
-        });
-      }
+      const addPill = (s: Slide, x: number, y: number, label: string) => {
+        const pillW = Math.max(label.length * 0.1 + 0.35, 1.5);
+        s.addShape('roundRect', { x, y, w: pillW, h: 0.3, fill: { color: ORANGE }, line: { color: ORANGE }, rectRadius: 0.08 });
+        s.addText(label, { x, y, w: pillW, h: 0.3, fontSize: 9, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
+      };
 
-      // ── Overall leaderboard ───────────────────────────────────────────────
-      {
-        const s = pptx.addSlide();
-        addBg(s);
-        addTopBar(s, 'Overall Standings');
-        addQLabel(s);
-        const sorted = Object.entries(data.totalByNominee).sort((a, b) => b[1] - a[1]).slice(0, 8);
-        const maxV   = sorted[0]?.[1] ?? 1;
-        const topName  = sorted[0]?.[0];
-        const topPhoto = topName ? photoCache[topName] : null;
-        const hasPhoto = !!topPhoto;
-        const tableX = hasPhoto ? 0.4 : 1.5;
-        const tableW = hasPhoto ? 6.5 : 7;
-        sorted.forEach(([name, count], i) => {
-          const rowY = 0.85 + i * 0.54;
-          const bw = (count / maxV) * (tableW - 2.5);
-          s.addShape('rect', { x: tableX + 1.8, y: rowY + 0.09, w: tableW - 2.5, h: 0.34, fill: { color: DARK_BLUE }, line: { color: DARK_BLUE } });
-          s.addShape('rect', { x: tableX + 1.8, y: rowY + 0.09, w: Math.max(bw, 0.05), h: 0.34, fill: { color: i === 0 ? ORANGE : STEEL }, line: { color: i === 0 ? ORANGE : STEEL } });
-          s.addText(`${i + 1}.`, { x: tableX,       y: rowY, w: 0.4,              h: 0.52, fontSize: 13, bold: i === 0, color: i === 0 ? ORANGE : DIM,   fontFace: 'Calibri' });
-          s.addText(name,         { x: tableX + 0.45, y: rowY, w: 1.3,              h: 0.52, fontSize: 12, bold: i === 0, color: WHITE,                     fontFace: 'Calibri' });
-          s.addText(String(count),{ x: tableX + tableW - 0.55, y: rowY, w: 0.5, h: 0.52, fontSize: 12, bold: i === 0, color: i === 0 ? ORANGE : DIM, align: 'right', fontFace: 'Calibri' });
-        });
-        if (hasPhoto) {
-          s.addImage({ data: topPhoto!, x: 7.3, y: 0.85, w: 2.3, h: 2.3 });
-          s.addShape('rect', { x: 7.3, y: 3.2, w: 2.3, h: 0.45, fill: { color: ORANGE }, line: { color: ORANGE } });
-          s.addText('#1  ' + topName, { x: 7.3, y: 3.2, w: 2.3, h: 0.45, fontSize: 12, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+      const addPhotoOrInitial = (s: Slide, name: string, x: number, y: number, d: number) => {
+        const photo = photoCache[name];
+        if (photo) {
+          s.addImage({ data: photo, x, y, w: d, h: d, rounding: true });
+        } else {
+          s.addShape('ellipse', { x, y, w: d, h: d, fill: { color: ORANGE }, line: { color: ORANGE } });
+          s.addText(name.charAt(0).toUpperCase(), { x, y, w: d, h: d, fontSize: Math.round(d * 14), bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
         }
-      }
+      };
 
-      // ── Category winners overview ──────────────────────────────────────────
+      // ── Slide 1: Title ────────────────────────────────────────────────────────
       {
         const s = pptx.addSlide();
         addBg(s);
-        addTopBar(s, 'Category Winners');
-        addQLabel(s);
-        const rows = CATEGORIES_ORDER.map(cat => {
-          const catVotes = data.votesByCategory[cat] ?? {};
-          const winner = Object.entries(catVotes).sort((a, b) => b[1] - a[1])[0];
-          return { cat: CATEGORY_DISPLAY[cat], winner: winner ? winner[0] : 'No votes', votes: winner ? winner[1] : 0 };
-        });
-        const half  = Math.ceil(rows.length / 2);
-        const colW  = 4.6;
-        const rh    = 0.46;
-        const startY = 0.85;
-        rows.forEach((row, i) => {
-          const col = i < half ? 0 : 1;
-          const ri  = i < half ? i : i - half;
-          const cx  = col === 0 ? 0.35 : 5.2;
-          const cy  = startY + ri * (rh + 0.06);
-          s.addShape('rect', { x: cx, y: cy, w: colW, h: rh, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
-          s.addText(row.cat, { x: cx + 0.1, y: cy, w: 2.4, h: rh, fontSize: 9.5, color: DIM,   valign: 'middle', fontFace: 'Calibri' });
-          s.addText(row.winner, { x: cx + 2.55, y: cy, w: colW - 2.65, h: rh, fontSize: 11, bold: true, color: WHITE, valign: 'middle', fontFace: 'Calibri' });
-        });
+        const bandY = 2.8, bandH = 2.8;
+        s.addShape('rect', { x: 0, y: bandY,          w: W, h: bandH,  fill: { color: CARD },   line: { color: CARD } });
+        s.addShape('rect', { x: 0, y: bandY,          w: W, h: 0.06,   fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addShape('rect', { x: 0, y: bandY + bandH,  w: W, h: 0.06,   fill: { color: ORANGE }, line: { color: ORANGE } });
+        if (logoB64) {
+          s.addImage({ data: logoB64, x: (W - 3.4) / 2, y: 0.8, w: 3.4, h: 1.35 });
+        } else {
+          s.addText('WealthPoint Capital', { x: 1, y: 0.8, w: W - 2, h: 1.35, fontSize: 22, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+        }
+        s.addText('EMPLOYEE OF THE QUARTER', { x: 1, y: 2.95, w: W - 2, h: 1.15, fontSize: 52, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+        s.addText('AWARDS', { x: 1, y: 4.15, w: W - 2, h: 0.75, fontSize: 34, color: ORANGE, align: 'center', charSpacing: 8, fontFace: 'Calibri' });
+        s.addText(`${ql}  ·  Wealthpoint Capital`, { x: 1, y: 5.0, w: W - 2, h: 0.45, fontSize: 14, color: DIM, align: 'center', fontFace: 'Calibri' });
+        s.addText('Dare to be great.', { x: 1, y: 5.52, w: W - 2, h: 0.42, fontSize: 13, italic: true, color: DIM, align: 'center', fontFace: 'Calibri' });
       }
 
-      // ── Per-category slides ────────────────────────────────────────────────
+      // ── Slides 2-11: One per category ─────────────────────────────────────────
       for (const cat of CATEGORIES_ORDER) {
         const s = pptx.addSlide();
         addBg(s);
-        const displayName = CATEGORY_DISPLAY[cat];
-        const catVotes = data.votesByCategory[cat] ?? {};
-        const sorted   = Object.entries(catVotes).sort((a, b) => b[1] - a[1]);
-        const winner   = sorted[0];
-        const maxV     = winner?.[1] ?? 1;
-        const winnerPhoto = winner ? photoCache[winner[0]] : null;
+        addHeader(s);
 
-        s.addShape('rect', { x: 0, y: 0, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-        s.addText(displayName, { x: 0.4, y: 0.12, w: 7, h: 0.75, fontSize: 28, bold: true, color: WHITE, fontFace: 'Calibri' });
-        s.addText(ql, { x: 7.5, y: 0.12, w: 2.1, h: 0.55, fontSize: 13, color: ORANGE, align: 'right', fontFace: 'Calibri' });
+        const catVotes   = data.votesByCategory[cat] ?? {};
+        const sortedCat  = Object.entries(catVotes).sort((a, b) => b[1] - a[1]);
+        const topCount   = sortedCat[0]?.[1] ?? 0;
+        const catWinners = topCount > 0 ? sortedCat.filter(([, c]) => c === topCount).map(([n]) => n) : [];
+        const runnerUp   = sortedCat.find(([n, c]) => !catWinners.includes(n) && c > 0);
+        const isCatTie   = catWinners.length > 1;
+        const desc       = CAT_DESC[cat] ?? '';
 
-        if (sorted.length === 0) {
-          s.addText('No votes recorded', { x: 0.4, y: 2.5, w: W - 0.8, h: 0.6, fontSize: 18, color: DIM, align: 'center', fontFace: 'Calibri' });
+        addPill(s, 0.6, 1.2, 'AWARD CATEGORY');
+        s.addText(CATEGORY_DISPLAY[cat], { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
+        s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addText(desc, { x: 0.6, y: 2.62, w: W - 1.2, h: 0.46, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
+
+        const cardX = 0.6, cardY = 3.18, cardW = W - 1.2, cardH = 3.55;
+        s.addShape('rect', { x: cardX, y: cardY, w: cardW, h: cardH, fill: { color: DARK_BLUE }, line: { color: DARK_BLUE } });
+
+        if (catWinners.length === 0) {
+          s.addText('No votes recorded', { x: cardX, y: cardY + cardH / 2 - 0.3, w: cardW, h: 0.6, fontSize: 18, color: DIM, align: 'center', fontFace: 'Calibri' });
+        } else if (!isCatTie) {
+          const winner = catWinners[0];
+          const d = 1.85;
+          const photoX = cardX + (cardW - d) / 2;
+          const photoY = cardY + 0.6;
+          s.addText('WINNER', { x: cardX, y: cardY + 0.12, w: cardW, h: 0.38, fontSize: 13, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          addPhotoOrInitial(s, winner, photoX, photoY, d);
+          s.addText(winner, { x: cardX, y: photoY + d + 0.16, w: cardW, h: 0.62, fontSize: 24, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+          s.addText(`${ql} Award Recipient`, { x: cardX, y: photoY + d + 0.82, w: cardW, h: 0.32, fontSize: 11, color: DIM, align: 'center', fontFace: 'Calibri' });
+
+          if (runnerUp) {
+            const ruY = cardY + cardH + 0.14;
+            s.addShape('rect', { x: cardX, y: ruY, w: cardW, h: 0.56, fill: { color: CARD }, line: { color: CARD } });
+            s.addText('RUNNER-UP', { x: cardX + 0.2, y: ruY, w: 1.3, h: 0.56, fontSize: 9, color: DIM, valign: 'middle', fontFace: 'Calibri' });
+            addPhotoOrInitial(s, runnerUp[0], cardX + 1.65, ruY + 0.03, 0.5);
+            s.addText(runnerUp[0], { x: cardX + 2.3, y: ruY, w: cardW - 2.5, h: 0.56, fontSize: 15, bold: true, color: WHITE, valign: 'middle', fontFace: 'Calibri' });
+          }
         } else {
-          if (winner) {
-            s.addShape('rect', { x: 0.35, y: 1.05, w: 5.8, h: 0.68, fill: { color: ORANGE }, line: { color: ORANGE } });
-            s.addText('WINNER: ' + winner[0], { x: 0.35, y: 1.05, w: 5.8, h: 0.68, fontSize: 18, bold: true, color: WHITE, valign: 'middle', fontFace: 'Calibri' });
-          }
-          sorted.forEach(([name, count], i) => {
-            const by = 1.9 + i * 0.44;
-            if (by > H - 0.25) return;
-            const bw = (count / maxV) * 3.7;
-            s.addShape('rect', { x: 1.85, y: by, w: 3.7, h: 0.34, fill: { color: DARK_BLUE }, line: { color: DARK_BLUE } });
-            s.addShape('rect', { x: 1.85, y: by, w: Math.max(bw, 0.05), h: 0.34, fill: { color: i === 0 ? ORANGE : STEEL }, line: { color: i === 0 ? ORANGE : STEEL } });
-            s.addText(name,         { x: 0.35, y: by, w: 1.45, h: 0.34, fontSize: 10, color: i === 0 ? WHITE : DIM, valign: 'middle', fontFace: 'Calibri' });
-            s.addText(String(count),{ x: 5.6,  y: by, w: 0.5,  h: 0.34, fontSize: 10, color: i === 0 ? ORANGE : DIM, align: 'right', valign: 'middle', fontFace: 'Calibri' });
+          const d = Math.min(1.55, (cardW - 0.4) / catWinners.length - 0.5);
+          const totalTieW = catWinners.length * (d + 0.45) - 0.45;
+          const tieStartX = cardX + (cardW - totalTieW) / 2;
+          s.addText('WINNERS', { x: cardX, y: cardY + 0.12, w: cardW, h: 0.38, fontSize: 13, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          catWinners.forEach((wname, i) => {
+            const wx = tieStartX + i * (d + 0.45);
+            const wy = cardY + 0.65;
+            addPhotoOrInitial(s, wname, wx, wy, d);
+            s.addText(wname, { x: wx - 0.1, y: wy + d + 0.1, w: d + 0.2, h: 0.46, fontSize: 12, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
           });
-          if (winnerPhoto) {
-            s.addImage({ data: winnerPhoto, x: 7.0, y: 0.85, w: 2.65, h: 2.65 });
-            s.addShape('rect', { x: 7.0, y: 3.55, w: 2.65, h: 0.42, fill: { color: ORANGE }, line: { color: ORANGE } });
-            s.addText(winner[0], { x: 7.0, y: 3.55, w: 2.65, h: 0.42, fontSize: 11, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
-          }
+          s.addText(`${ql} Award Recipients`, { x: cardX, y: cardY + cardH - 0.42, w: cardW, h: 0.34, fontSize: 11, color: DIM, align: 'center', fontFace: 'Calibri' });
         }
       }
 
-      // ── Memorable interactions ─────────────────────────────────────────────
+      // ── Slide 12: Honourable Mentions ──────────────────────────────────────────
+      {
+        const mentions = Object.keys(memberPhoto).map(name => {
+          const cats = CATEGORIES_ORDER.filter(c => (data.votesByCategory[c]?.[name] ?? 0) > 0);
+          return { name, cats };
+        }).filter(m => m.cats.length > 0).sort((a, b) => b.cats.length - a.cats.length);
+
+        const rowsPerSlide = 6;
+        const totalMentionSlides = Math.ceil(mentions.length / rowsPerSlide) || 1;
+        for (let pg = 0; pg < totalMentionSlides; pg++) {
+          const chunk = mentions.slice(pg * rowsPerSlide, (pg + 1) * rowsPerSlide);
+          const s = pptx.addSlide();
+          addBg(s);
+          addHeader(s);
+          addPill(s, 0.6, 1.2, 'HONOURABLE MENTIONS');
+          s.addText('Across Multiple Categories', { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
+          s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+          s.addText('These team members received nominations in multiple award categories this quarter.', { x: 0.6, y: 2.62, w: W - 1.2, h: 0.45, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
+          chunk.forEach((m, i) => {
+            const ry = 3.25 + i * 0.68;
+            const pillW = Math.max((`${m.cats.length} CATEGORIES`).length * 0.1 + 0.35, 1.5);
+            s.addShape('roundRect', { x: W - 0.6 - pillW, y: ry + 0.08, w: pillW, h: 0.3, fill: { color: ORANGE }, line: { color: ORANGE }, rectRadius: 0.08 });
+            s.addText(`${m.cats.length} CATEGORIES`, { x: W - 0.6 - pillW, y: ry + 0.08, w: pillW, h: 0.3, fontSize: 9, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
+            s.addText(`${i + 1 + pg * rowsPerSlide}.`, { x: 0.6, y: ry, w: 0.55, h: 0.55, fontSize: 14, bold: true, color: ORANGE, valign: 'middle', fontFace: 'Calibri' });
+            s.addText(m.name, { x: 1.2, y: ry, w: 3.5, h: 0.55, fontSize: 14, bold: true, color: WHITE, valign: 'middle', fontFace: 'Calibri' });
+            const catNames = m.cats.map(c => CATEGORY_DISPLAY[c]).join(' · ');
+            s.addText(catNames, { x: 4.8, y: ry, w: W - 4.8 - pillW - 0.8, h: 0.55, fontSize: 10, color: DIM, valign: 'middle', fontFace: 'Calibri' });
+          });
+        }
+      }
+
+      // ── Slide 13: Memorable Moments ────────────────────────────────────────────
       if (data.interactions.length > 0) {
-        const perPage = 5;
-        for (let ci = 0; ci < data.interactions.length; ci += perPage) {
-          const chunk = data.interactions.slice(ci, ci + perPage);
-          const totalPages = Math.ceil(data.interactions.length / perPage);
+        const perMoment = 3;
+        const totalMomentPages = Math.ceil(data.interactions.length / perMoment);
+        for (let pg = 0; pg < totalMomentPages; pg++) {
+          const chunk = data.interactions.slice(pg * perMoment, (pg + 1) * perMoment);
           const s = pptx.addSlide();
           addBg(s);
-          addTopBar(s, totalPages > 1 ? `Memorable Interactions (${Math.floor(ci / perPage) + 1}/${totalPages})` : 'Memorable Interactions');
-          addQLabel(s);
+          addHeader(s);
+          addPill(s, 0.6, 1.2, 'MEMORABLE MOMENTS');
+          s.addText('Highlights of the Quarter', { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
+          s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+          s.addText('A highlights reel of standout moments, as shared by the team.', { x: 0.6, y: 2.62, w: W - 1.2, h: 0.45, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
           chunk.forEach((item, i) => {
-            const iy = 0.85 + i * 0.9;
-            s.addShape('rect', { x: 0.35, y: iy, w: W - 0.7, h: 0.82, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
-            s.addText(`${item.voter_name} about ${item.about_person}`, { x: 0.5, y: iy + 0.05, w: W - 1, h: 0.28, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
-            s.addText(item.description.slice(0, 180), { x: 0.5, y: iy + 0.36, w: W - 1, h: 0.4, fontSize: 10, color: WHITE, fontFace: 'Calibri' });
+            const cy2 = 3.25 + i * 1.38;
+            s.addShape('rect', { x: 0.6, y: cy2, w: W - 1.2, h: 1.25, fill: { color: CARD }, line: { color: CARD } });
+            s.addText(`About: ${item.about_person}`, { x: 0.8, y: cy2 + 0.1, w: 5.5, h: 0.3, fontSize: 10, bold: true, color: ORANGE, fontFace: 'Calibri' });
+            s.addText(`shared by ${item.voter_name}`, { x: W - 5.2, y: cy2 + 0.1, w: 4.4, h: 0.3, fontSize: 10, color: DIM, align: 'right', fontFace: 'Calibri' });
+            s.addText(item.description.slice(0, 240), { x: 0.8, y: cy2 + 0.46, w: W - 1.6, h: 0.7, fontSize: 10.5, italic: true, color: WHITE, fontFace: 'Calibri' });
           });
         }
       }
 
-      // ── Fines ─────────────────────────────────────────────────────────────
+      // ── Slide 14: Fines ────────────────────────────────────────────────────────
       if (data.gees.length > 0) {
-        const perPage = 4;
+        const perFine = 3;
         let geeOffset = 0;
-        for (let ci = 0; ci < data.gees.length; ci += perPage) {
-          const chunk = data.gees.slice(ci, ci + perPage);
-          const totalPages = Math.ceil(data.gees.length / perPage);
+        const totalFinePages = Math.ceil(data.gees.length / perFine);
+        for (let pg = 0; pg < totalFinePages; pg++) {
+          const chunk = data.gees.slice(pg * perFine, (pg + 1) * perFine);
           const s = pptx.addSlide();
           addBg(s);
-          addTopBar(s, totalPages > 1 ? `Fines (${Math.floor(ci / perPage) + 1}/${totalPages})` : "Fines (G's)");
-          addQLabel(s);
+          addHeader(s);
+          addPill(s, 0.6, 1.2, "FOR THE GEES");
+          s.addText('The Fines', { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
+          s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+          s.addText('Because some moments deserve to be remembered forever.', { x: 0.6, y: 2.62, w: W - 1.2, h: 0.45, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
           chunk.forEach((g, i) => {
             const imgB64  = geeImgCache[geeOffset + i];
             const hasImg  = !!imgB64;
-            const iy      = 0.85 + i * 1.12;
-            const cardH   = 1.02;
-            s.addShape('rect', { x: 0.35, y: iy, w: W - 0.7, h: cardH, fill: { color: CARD }, line: { color: STEEL, pt: 1 } });
+            const cy2     = 3.25 + i * 1.38;
+            const cH2     = 1.25;
+            s.addShape('rect', { x: 0.6, y: cy2, w: W - 1.2, h: cH2, fill: { color: CARD }, line: { color: CARD } });
             const headerText = g.fined_person ? `${g.voter_name} fined ${g.fined_person}` : g.voter_name;
-            s.addText(headerText, { x: 0.5, y: iy + 0.06, w: hasImg ? W - 2.8 : W - 1, h: 0.28, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
-            s.addText(g.content.slice(0, 200), { x: 0.5, y: iy + 0.37, w: hasImg ? W - 2.8 : W - 1, h: 0.56, fontSize: 10, color: WHITE, fontFace: 'Calibri' });
+            const textW = hasImg ? W - 4.2 : W - 1.6;
+            s.addText(headerText, { x: 0.8, y: cy2 + 0.1, w: textW, h: 0.3, fontSize: 11, bold: true, color: ORANGE, fontFace: 'Calibri' });
+            s.addText(g.content.slice(0, 240), { x: 0.8, y: cy2 + 0.46, w: textW, h: 0.7, fontSize: 10.5, color: WHITE, fontFace: 'Calibri' });
             if (hasImg) {
-              s.addImage({ data: imgB64!, x: W - 2.05, y: iy + 0.07, w: 1.55, h: 0.86 });
+              s.addImage({ data: imgB64!, x: W - 2.85, y: cy2 + 0.1, w: 2.05, h: cH2 - 0.2 });
             }
           });
           geeOffset += chunk.length;
         }
       }
 
-      // ── Voter ballots ──────────────────────────────────────────────────────
-      {
-        const voters     = data.voters.map(v => v.name);
-        const perPage    = 4;
-        for (let ci = 0; ci < voters.length; ci += perPage) {
-          const chunk      = voters.slice(ci, ci + perPage);
-          const totalPages = Math.ceil(voters.length / perPage);
-          const s = pptx.addSlide();
-          addBg(s);
-          addTopBar(s, totalPages > 1 ? `Voter Ballots (${Math.floor(ci / perPage) + 1}/${totalPages})` : 'Voter Ballots');
-          addQLabel(s);
-          const colW = (W - 0.7) / chunk.length;
-          chunk.forEach((voter, vi) => {
-            const cx = 0.35 + vi * colW;
-            s.addShape('rect', { x: cx, y: 0.85, w: colW - 0.15, h: 0.38, fill: { color: ORANGE }, line: { color: ORANGE } });
-            s.addText(voter, { x: cx, y: 0.85, w: colW - 0.15, h: 0.38, fontSize: 11, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
-            const picks = data.voterBreakdown[voter] ?? {};
-            let ry = 1.3;
-            CATEGORIES_ORDER.forEach(cat => {
-              const nominees = picks[cat] ?? [];
-              if (nominees.length === 0) return;
-              if (ry > H - 0.2) return;
-              s.addText(CATEGORY_DISPLAY[cat].replace('THE ', ''), { x: cx, y: ry, w: colW - 0.15, h: 0.22, fontSize: 7.5, color: DIM, fontFace: 'Calibri' });
-              ry += 0.22;
-              nominees.forEach(n => {
-                if (ry > H - 0.15) return;
-                s.addText(n, { x: cx + 0.05, y: ry, w: colW - 0.2, h: 0.2, fontSize: 8.5, bold: true, color: WHITE, fontFace: 'Calibri' });
-                ry += 0.2;
-              });
-            });
-          });
-        }
-      }
-
-      // ── Suspense slide ────────────────────────────────────────────────────
+      // ── Slide 15: By the Numbers ───────────────────────────────────────────────
       {
         const s = pptx.addSlide();
         addBg(s);
-        s.addShape('rect', { x: 0, y: 2.05, w: W, h: 1.5,  fill: { color: CARD },   line: { color: CARD } });
-        s.addShape('rect', { x: 0, y: 2.05, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-        s.addShape('rect', { x: 0, y: 3.51, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-        s.addText('AND THE WINNER IS...', { x: 0.5, y: 2.1, w: W - 1, h: 1.4, fontSize: 40, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
-        if (logoB64) {
-          s.addImage({ data: logoB64, x: (W - 2.2) / 2, y: 4.1, w: 2.2, h: 0.88 });
-        }
-      }
+        addHeader(s);
+        addPill(s, 0.6, 1.2, 'BY THE NUMBERS');
+        s.addText('Voting Statistics', { x: 0.6, y: 1.62, w: W - 1.2, h: 0.82, fontSize: 34, bold: true, color: WHITE, fontFace: 'Calibri' });
+        s.addShape('rect', { x: 0.6, y: 2.48, w: 0.9, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addText(`A snapshot of participation and engagement for ${ql}.`, { x: 0.6, y: 2.62, w: W - 1.2, h: 0.45, fontSize: 11, italic: true, color: DIM, fontFace: 'Calibri' });
 
-      // ── Winner reveal ─────────────────────────────────────────────────────
-      {
-        const sorted    = Object.entries(data.totalByNominee).sort((a, b) => b[1] - a[1]);
-        const topScore  = sorted[0]?.[1] ?? 0;
-        const winnerNames = sorted.filter(([, c]) => c === topScore).map(([n]) => n);
-        const isTie     = winnerNames.length > 1;
-        const s = pptx.addSlide();
-        addBg(s);
-        s.addShape('rect', { x: 0, y: 0,        w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-        s.addShape('rect', { x: 0, y: H - 0.04, w: W, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
+        const participationRate = Math.round((data.voters.length / Object.keys(memberPhoto).length) * 100) + '%';
+        const stats4 = [
+          { label: 'Voters Participated',  value: String(data.voters.length) },
+          { label: 'Total Votes Cast',     value: String(data.totalVotesCount) },
+          { label: 'Participation Rate',   value: participationRate },
+          { label: 'Memorable Moments',    value: String(data.interactions.length) },
+        ];
+        const cw4 = 2.8, ch4 = 1.55, cy4 = 3.25, gap4 = 0.38;
+        const startX4 = (W - (stats4.length * cw4 + (stats4.length - 1) * gap4)) / 2;
+        stats4.forEach((st, i) => {
+          const cx4 = startX4 + i * (cw4 + gap4);
+          s.addShape('rect', { x: cx4, y: cy4, w: cw4, h: ch4, fill: { color: CARD }, line: { color: CARD } });
+          s.addText(st.value, { x: cx4, y: cy4 + 0.16, w: cw4, h: 0.9, fontSize: 44, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          s.addText(st.label, { x: cx4, y: cy4 + 1.14, w: cw4, h: 0.32, fontSize: 11, color: DIM, align: 'center', fontFace: 'Calibri' });
+        });
 
-        if (!isTie && winnerNames[0]) {
-          const winner = winnerNames[0];
-          const photo  = photoCache[winner];
-          if (photo) {
-            s.addImage({ data: photo, x: 0.4, y: 0.2, w: 4.2, h: 4.2 });
+        let closestCat = '';
+        let closestGap = Infinity;
+        let closestMax = 0;
+        CATEGORIES_ORDER.forEach(cat => {
+          const counts = Object.values(data.votesByCategory[cat] ?? {}).sort((a, b) => b - a);
+          if (counts.length === 0) return;
+          const gap = counts[0] - (counts[1] ?? 0);
+          const total = counts.reduce((acc, c) => acc + c, 0);
+          if (gap < closestGap || (gap === closestGap && total > closestMax)) {
+            closestGap = gap; closestCat = cat; closestMax = total;
           }
-          const tx = photo ? 5.0  : 1.5;
-          const tw = photo ? 4.6  : 7;
-          s.addText('EMPLOYEE OF THE QUARTER', { x: tx, y: 0.4,  w: tw, h: 0.65, fontSize: 16, bold: true, color: DIM,   fontFace: 'Calibri' });
-          s.addText(ql,                         { x: tx, y: 1.05, w: tw, h: 0.55, fontSize: 22, color: ORANGE, fontFace: 'Calibri' });
-          s.addShape('rect', { x: tx, y: 1.7, w: tw, h: 0.04, fill: { color: ORANGE }, line: { color: ORANGE } });
-          s.addText(winner,                     { x: tx, y: 1.85, w: tw, h: 1.1,  fontSize: 36, bold: true, color: WHITE,  fontFace: 'Calibri' });
-          s.addText(`${topScore} votes`,        { x: tx, y: 3.0,  w: tw, h: 0.55, fontSize: 20, color: ORANGE, fontFace: 'Calibri' });
-          s.addText('Congratulations!',         { x: tx, y: 3.65, w: tw, h: 0.6,  fontSize: 18, color: DIM,   fontFace: 'Calibri' });
-          if (logoB64) {
-            s.addImage({ data: logoB64, x: tx, y: 4.3, w: 1.8, h: 0.72 });
+        });
+        if (closestCat) {
+          const crY = cy4 + ch4 + 0.32;
+          s.addShape('rect', { x: 0.6, y: crY, w: W - 1.2, h: 0.8, fill: { color: CARD }, line: { color: CARD } });
+          s.addText('CLOSEST RACE', { x: 0.8, y: crY + 0.1, w: 2.4, h: 0.28, fontSize: 10, bold: true, color: ORANGE, fontFace: 'Calibri' });
+          s.addText(CATEGORY_DISPLAY[closestCat], { x: 0.8, y: crY + 0.4, w: 5.0, h: 0.3, fontSize: 14, bold: true, color: WHITE, fontFace: 'Calibri' });
+          s.addText(`Top two nominees were separated by just ${closestGap} vote${closestGap === 1 ? '' : 's'}.`, { x: 6.2, y: crY + 0.1, w: W - 6.8, h: 0.6, fontSize: 11, italic: true, color: DIM, valign: 'middle', fontFace: 'Calibri' });
+        }
+
+        s.addText(`Thank you to everyone who participated in ${ql} Employee of the Quarter Awards.`, { x: 0.6, y: H - 0.88, w: W - 1.2, h: 0.3, fontSize: 10, color: DIM, align: 'center', fontFace: 'Calibri' });
+        s.addText('Wealthpoint Capital  ·  Dare to be great.', { x: 0.6, y: H - 0.54, w: W - 1.2, h: 0.28, fontSize: 10, italic: true, color: DIM, align: 'center', fontFace: 'Calibri' });
+      }
+
+      // ── Slide 16: Suspense ─────────────────────────────────────────────────────
+      {
+        const s = pptx.addSlide();
+        addBg(s);
+        const bandY2 = H / 2 - 1.05, bandH2 = 2.1;
+        s.addShape('rect', { x: 0, y: bandY2,           w: W, h: bandH2, fill: { color: CARD },   line: { color: CARD } });
+        s.addShape('rect', { x: 0, y: bandY2,           w: W, h: 0.06,   fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addShape('rect', { x: 0, y: bandY2 + bandH2,  w: W, h: 0.06,   fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addText('AND THE EMPLOYEE OF THE QUARTER IS...', { x: 0.5, y: bandY2 + 0.1, w: W - 1, h: bandH2 - 0.2, fontSize: 40, bold: true, color: WHITE, align: 'center', valign: 'middle', fontFace: 'Calibri' });
+        if (logoB64) {
+          s.addImage({ data: logoB64, x: (W - 2.5) / 2, y: bandY2 + bandH2 + 0.55, w: 2.5, h: 1.0 });
+        }
+      }
+
+      // ── Slide 17: Overall Winner Reveal ────────────────────────────────────────
+      {
+        const sortedAll   = Object.entries(data.totalByNominee).sort((a, b) => b[1] - a[1]);
+        const topScore    = sortedAll[0]?.[1] ?? 0;
+        const winnerNames = sortedAll.filter(([, c]) => c === topScore).map(([n]) => n);
+        const isFinalTie  = winnerNames.length > 1;
+        const s = pptx.addSlide();
+        addBg(s);
+        s.addShape('rect', { x: 0, y: 0,        w: W, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+        s.addShape('rect', { x: 0, y: H - 0.06, w: W, h: 0.06, fill: { color: ORANGE }, line: { color: ORANGE } });
+
+        if (!isFinalTie && winnerNames[0]) {
+          const winner = winnerNames[0];
+          addPill(s, 0.6, 0.28, 'OVERALL WINNER');
+          const d = 2.4;
+          addPhotoOrInitial(s, winner, (W - d) / 2, 0.85, d);
+          s.addText(winner, { x: 1, y: 0.85 + d + 0.2, w: W - 2, h: 0.95, fontSize: 40, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+          s.addText(`${topScore} votes received`, { x: 1, y: 0.85 + d + 1.2, w: W - 2, h: 0.48, fontSize: 20, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          s.addText('Most votes across all 10 award categories', { x: 1, y: 0.85 + d + 1.72, w: W - 2, h: 0.38, fontSize: 13, color: DIM, align: 'center', fontFace: 'Calibri' });
+
+          const quote = data.interactions.find(item => item.about_person === winner);
+          if (quote) {
+            const qY = 0.85 + d + 2.2;
+            s.addText('WHAT COLLEAGUES SAY', { x: 1, y: qY, w: W - 2, h: 0.28, fontSize: 10, color: DIM, align: 'center', fontFace: 'Calibri' });
+            s.addShape('rect', { x: 1, y: qY + 0.32, w: W - 2, h: 0.95, fill: { color: CARD }, line: { color: CARD } });
+            s.addText(`"${quote.description.slice(0, 180)}"`, { x: 1.2, y: qY + 0.38, w: W - 2.4, h: 0.6, fontSize: 10.5, italic: true, color: WHITE, fontFace: 'Calibri' });
+            s.addText(`-- ${quote.voter_name}`, { x: 1.2, y: qY + 1.0, w: W - 2.4, h: 0.22, fontSize: 9, color: DIM, align: 'right', fontFace: 'Calibri' });
           }
         } else {
-          s.addText("IT'S A TIE!", { x: 0.5, y: 0.6, w: W - 1, h: 0.9, fontSize: 44, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
-          s.addText(`${ql} - Joint Winners`, { x: 0.5, y: 1.55, w: W - 1, h: 0.55, fontSize: 20, color: DIM, align: 'center', fontFace: 'Calibri' });
-          const spacing = (W - 0.8) / winnerNames.length;
-          winnerNames.forEach((winner, i) => {
-            const cx    = 0.4 + i * spacing;
-            const photo = photoCache[winner];
-            if (photo) {
-              s.addImage({ data: photo, x: cx, y: 2.2, w: Math.min(spacing - 0.2, 2.0), h: Math.min(spacing - 0.2, 2.0) });
-            }
-            s.addText(winner, { x: cx, y: 4.3, w: spacing - 0.1, h: 0.45, fontSize: 13, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
+          s.addText("IT'S A TIE!", { x: 1, y: 1.0, w: W - 2, h: 1.1, fontSize: 54, bold: true, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          s.addText(`${ql} - Joint Winners`, { x: 1, y: 2.15, w: W - 2, h: 0.6, fontSize: 20, color: DIM, align: 'center', fontFace: 'Calibri' });
+          const d2 = Math.min(2.0, (W - 1.6) / winnerNames.length - 0.4);
+          const totalW2 = winnerNames.length * (d2 + 0.4) - 0.4;
+          const startX3 = (W - totalW2) / 2;
+          winnerNames.forEach((wn, i) => {
+            const wx = startX3 + i * (d2 + 0.4);
+            addPhotoOrInitial(s, wn, wx, 2.9, d2);
+            s.addText(wn, { x: wx - 0.15, y: 2.9 + d2 + 0.12, w: d2 + 0.3, h: 0.46, fontSize: 13, bold: true, color: WHITE, align: 'center', fontFace: 'Calibri' });
           });
-          s.addText(`${topScore} votes each`, { x: 0.5, y: 4.8, w: W - 1, h: 0.4, fontSize: 14, color: ORANGE, align: 'center', fontFace: 'Calibri' });
+          s.addText(`${topScore} votes each`, { x: 1, y: H - 1.05, w: W - 2, h: 0.45, fontSize: 16, color: ORANGE, align: 'center', fontFace: 'Calibri' });
         }
       }
 
